@@ -134,17 +134,17 @@
             gap: 1vh;
         }
 
-        /* Each Clock Column: auto (name) + 1fr (clock) */
+        /* Each Clock Column: fixed height (name) + 1fr (clock) */
         .clock-wrapper {
             display: grid;
-            grid-template-rows: auto 1fr;
+            grid-template-rows: 2.5vh 1fr;
             height: 100%;
             justify-items: center;
             align-items: start;
             gap: 0;
         }
 
-        /* City Name: Top Row */
+        /* City Name: Top Row - Fixed height to prevent clock shifting */
         .clock-city {
             font-size: 1.6vh;
             font-weight: 600;
@@ -152,6 +152,9 @@
             white-space: nowrap;
             align-self: end;
             line-height: 1;
+            height: 2.5vh;
+            display: flex;
+            align-items: flex-end;
         }
 
         /* Analog Clock: Bottom Row */
