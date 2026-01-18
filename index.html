@@ -87,9 +87,10 @@
         }
 
         .time-weather-row {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             align-items: center;
-            gap: 2vh;
+            gap: 1vh;
         }
 
         .local-time {
@@ -97,6 +98,8 @@
             font-weight: 600;
             color: #C4682D;
             line-height: 1.2;
+            text-align: left;
+            justify-self: start;
         }
 
         .local-date {
@@ -112,6 +115,7 @@
             font-size: 1.4vh;
             color: #fff;
             line-height: 1.2;
+            justify-self: end;
         }
 
         .weather-icon {
