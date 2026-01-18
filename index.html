@@ -86,6 +86,12 @@
             line-height: 1.2;
         }
 
+        .time-weather-row {
+            display: flex;
+            align-items: center;
+            gap: 2vh;
+        }
+
         .local-time {
             font-size: 2.2vh;
             font-weight: 600;
@@ -102,7 +108,7 @@
         .weather-info {
             display: flex;
             align-items: center;
-            gap: 1vh;
+            gap: 0.8vh;
             font-size: 1.4vh;
             color: #fff;
             line-height: 1.2;
@@ -128,12 +134,13 @@
             gap: 1vh;
         }
 
-        /* Each Clock Column: 1fr (name) + 2fr (clock) */
+        /* Each Clock Column: auto (name) + 1fr (clock) */
         .clock-wrapper {
             display: grid;
-            grid-template-rows: 1fr 2fr;
+            grid-template-rows: auto 1fr;
             height: 100%;
             justify-items: center;
+            gap: 0.5vh;
         }
 
         /* City Name: Top Row */
@@ -315,7 +322,7 @@
         .news-ticker {
             display: flex;
             white-space: nowrap;
-            animation: scroll-left 168s linear infinite;
+            animation: scroll-left 218s linear infinite;
         }
 
         .news-item {
@@ -397,12 +404,14 @@
         <div class="top-bar">
             <div class="location-info">
                 <div class="city-name">BANGKOK</div>
-                <div class="local-time" id="localTime">00:00:00</div>
-                <div class="local-date" id="localDate">Loading...</div>
-                <div class="weather-info">
-                    <span class="weather-icon" id="weatherIcon">⛅</span>
-                    <span class="weather-temp" id="weatherTemp">--°C</span>
+                <div class="time-weather-row">
+                    <div class="local-time" id="localTime">00:00:00</div>
+                    <div class="weather-info">
+                        <span class="weather-icon" id="weatherIcon">⛅</span>
+                        <span class="weather-temp" id="weatherTemp">--°C</span>
+                    </div>
                 </div>
+                <div class="local-date" id="localDate">Loading...</div>
             </div>
 
             <div class="world-clocks">
