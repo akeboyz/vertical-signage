@@ -1,0 +1,22 @@
+[
+    {
+        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+        "cta_en": "Explore Our Menu",
+        "cta_th": "สำรวจเมนูของเรา"
+    },
+    {
+        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+        "cta_en": "Discover Properties",
+        "cta_th": "ค้นพบอสังหาริมทรัพย์"
+    },
+    {
+        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+        "cta_en": "View Special Offers",
+        "cta_th": "ดูข้อเสนอพิเศษ"
+    },
+    {
+        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+        "cta_en": "Learn More",
+        "cta_th": "เรียนรู้เพิ่มเติม"
+    }
+]
