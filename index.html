@@ -679,24 +679,59 @@
             // Map weather descriptions to emoji icons
             const desc = description.toLowerCase();
 
-            if (desc.includes('clear')) return '☀️';
-            if (desc.includes('cloud') && desc.includes('few')) return '🌤️';
-            if (desc.includes('cloud') && (desc.includes('scattered') || desc.includes('partly'))) return '⛅';
+            // Check if it's night time (18:00 - 06:00) in Bangkok
+            const now = new Date();
+            const bangkokHour = parseInt(now.toLocaleTimeString('en-US', {
+                timeZone: 'Asia/Bangkok',
+                hour12: false,
+                hour: 'numeric'
+            }));
+            const isNight = bangkokHour >= 18 || bangkokHour < 6;
+
+            // Clear sky - different icons for day/night
+            if (desc.includes('clear')) {
+                return isNight ? '🌙' : '☀️';
+            }
+
+            // Few clouds - different icons for day/night
+            if (desc.includes('cloud') && desc.includes('few')) {
+                return isNight ? '☁️' : '🌤️';
+            }
+
+            // Scattered/partly cloudy
+            if (desc.includes('cloud') && (desc.includes('scattered') || desc.includes('partly'))) {
+                return isNight ? '☁️' : '⛅';
+            }
+
+            // Broken clouds or overcast
             if (desc.includes('cloud') && desc.includes('broken')) return '☁️';
             if (desc.includes('overcast') || desc.includes('cloud')) return '☁️';
+
+            // Rain conditions (same for day/night)
             if (desc.includes('rain') && desc.includes('light')) return '🌦️';
             if (desc.includes('rain') || desc.includes('drizzle')) return '🌧️';
             if (desc.includes('thunderstorm') || desc.includes('storm')) return '⛈️';
             if (desc.includes('snow')) return '🌨️';
             if (desc.includes('mist') || desc.includes('fog') || desc.includes('haze')) return '🌫️';
 
-            return '⛅'; // Default icon
+            // Default icon based on time
+            return isNight ? '🌙' : '⛅';
         }
 
         function useMockWeatherData() {
             // Temporary mock data while waiting for OpenWeatherMap API key to activate
             console.log('Weather: Using mock data (API key activating...)');
-            document.getElementById('weatherIcon').textContent = '⛅';
+
+            // Show appropriate icon based on time
+            const now = new Date();
+            const bangkokHour = parseInt(now.toLocaleTimeString('en-US', {
+                timeZone: 'Asia/Bangkok',
+                hour12: false,
+                hour: 'numeric'
+            }));
+            const isNight = bangkokHour >= 18 || bangkokHour < 6;
+
+            document.getElementById('weatherIcon').textContent = isNight ? '🌙' : '⛅';
             document.getElementById('weatherTemp').textContent = '32°C';
         }
 
