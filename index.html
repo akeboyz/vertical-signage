@@ -477,27 +477,20 @@
         // CONFIGURATION
         // ========================================
         /**
-         * API Configuration for Digital Signage
+         * YODECK-OPTIMIZED CONFIGURATION
          *
-         * OPENWEATHERMAP API:
-         * - Sign up at: https://openweathermap.org/api
-         * - Replace 'YOUR_OPENWEATHERMAP_API_KEY' with your actual API key
-         * - Free tier: 60 calls/minute, 1,000,000 calls/month
-         * - Endpoint: /weather (Current weather data)
-         * - Parameters: lat, lon, units=metric, appid
+         * This version is optimized for Yodeck and embedded digital signage environments.
+         * API calls are DISABLED to avoid CORS, localStorage, and network restriction issues.
          *
-         * NEWSDATA.IO API:
-         * - Sign up at: https://newsdata.io/
-         * - Replace 'YOUR_NEWSDATA_IO_API_KEY' with your actual API key
-         * - Free tier: 200 requests/day
-         * - Endpoint: /api/1/news
-         * - Parameters: country=th, language=th,en (bilingual support)
+         * Mock data is used for weather and news:
+         * - Weather: Shows time-appropriate icon (sun during day, moon at night)
+         * - News: Displays bilingual Thai/English mock headlines
+         * - Clocks: Real-time world clocks (no API needed)
          *
-         * CACHING STRATEGY:
-         * - Both APIs cache data in localStorage for 1 hour (3600000ms)
-         * - On page load, cached data is rendered immediately
-         * - New data is fetched only if cache is expired or missing
-         * - If API fetch fails, stale cache is displayed with console warning
+         * For API-enabled version:
+         * - OPENWEATHERMAP API: https://openweathermap.org/api
+         * - NEWSDATA.IO API: https://newsdata.io/
+         * (Note: May not work in embedded/iframe environments like Yodeck)
          */
         const CONFIG = {
             WEATHER_API_KEY: '7c215a78c991666a91e771892ee2aaba',  // OpenWeatherMap API key
@@ -891,12 +884,19 @@
         async function loadPlaylist() {
             try {
                 const response = await fetch('playlist.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const data = await response.json();
-                if (data && data.length > 0) {
+                if (data && Array.isArray(data) && data.length > 0) {
                     playlist = data;
+                    console.log('Playlist loaded:', playlist.length, 'videos');
+                } else {
+                    throw new Error('Invalid playlist data');
                 }
             } catch (error) {
-                console.warn('Could not load playlist.json, using defaults:', error);
+                console.warn('Could not load playlist.json, using default videos:', error.message);
+                // Default playlist is already set above, no action needed
             }
         }
 
@@ -952,25 +952,16 @@
         // INITIALIZATION
         // ========================================
         async function init() {
-            // Clear any corrupted cache from previous tests
-            localStorage.removeItem('weather_data');
-            localStorage.removeItem('weather_data_time');
-            localStorage.removeItem('news_data');
-            localStorage.removeItem('news_data_time');
-
+            // Yodeck-optimized: Skip cache clearing and API calls
             // Load playlist
             await loadPlaylist();
 
             // Start video playback
             playVideo();
 
-            // Show mock data immediately (fallback for CORS-blocked APIs)
+            // Use mock data only (reliable for Yodeck/embedded environments)
             useMockWeatherData();
             useMockNewsData();
-
-            // Try to fetch real weather and news (will override mock if successful)
-            fetchWeather();
-            fetchNews();
 
             // Update Bangkok time
             updateBangkokTime();
@@ -986,9 +977,11 @@
             // Toggle CTA language every 3 seconds
             setInterval(toggleCTALanguage, CONFIG.CTA_LANG_INTERVAL);
 
-            // Refresh weather and news every hour
-            setInterval(fetchWeather, CONFIG.CACHE_DURATION);
-            setInterval(fetchNews, CONFIG.CACHE_DURATION);
+            // Update weather icon every minute to ensure day/night switching
+            setInterval(useMockWeatherData, 60000);
+
+            // Note: API calls disabled for Yodeck compatibility
+            // APIs may be blocked by CORS, localStorage, or network restrictions in embedded environments
         }
 
         // Start when DOM is ready
