@@ -584,14 +584,20 @@
 
             // Apply theme based on local time (06:00 - 18:00 = Light Theme, else = Dark Theme)
             const clockElement = document.getElementById(`clock${clockIndex}`);
+            const cityNameElement = document.getElementById(`city${clockIndex}`);
+
             if (hours >= 6 && hours < 18) {
                 // Day time (06:00 - 18:00): Light theme (White background, Dark hands)
                 clockElement.classList.remove('dark-theme');
                 clockElement.classList.add('light-theme');
+                // Day time: White city name
+                cityNameElement.style.color = '#fff';
             } else {
                 // Night time (18:00 - 06:00): Dark theme (Dark background, White hands)
                 clockElement.classList.remove('light-theme');
                 clockElement.classList.add('dark-theme');
+                // Night time: Orange/bronze city name (matches Bangkok time color)
+                cityNameElement.style.color = '#C4682D';
             }
         }
 
