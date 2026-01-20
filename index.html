@@ -111,19 +111,28 @@
         }
 
         .weather-info {
+            position: relative;
             display: flex;
             align-items: center;
-            gap: 0.8vh;
+            justify-content: center;
             font-size: 1.4vh;
             color: #fff;
             line-height: 1.2;
             justify-self: end;
             margin-right: 3vh;
+            width: 8vh;
+            height: 5vh;
         }
 
         .weather-icon {
             font-size: 4vh;
             line-height: 1;
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.3;
+            z-index: 1;
         }
 
         .weather-temp {
@@ -131,6 +140,8 @@
             font-size: 2.2vh;
             color: #C4682D;
             font-variant-numeric: tabular-nums;
+            position: relative;
+            z-index: 2;
         }
 
         /* Right Side: World Clocks - 3 Equal Columns */
