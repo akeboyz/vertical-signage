@@ -418,6 +418,7 @@
             <!-- Video players -->
             <video class="video-player" id="mainVideo" autoplay muted playsinline></video>
             <video class="video-player video-hidden" id="preloadVideo" preload="auto" muted playsinline></video>
+            <img class="video-player video-hidden" id="imageSlide" alt="" draggable="false">
 
             <!-- ☰ Menu Button (top-left, z:200) -->
             <button class="menu-btn" id="menuBtn">
@@ -1217,8 +1218,12 @@ async function loadPlaylist() {
     // 1) Try Sanity
     try {
         const q = `*[_type == "playlistItem"] | order(order asc){
-            "url": coalesce(videoFile.asset->url, url),
-            cta_en, cta_th, category
+            enabled,
+            "mediaType": media->type,
+            "url": coalesce(media->videoFile.asset->url, media->imageFile.asset->url),
+            "category": media->category,
+            "defaultDuration": media->defaultImageDuration,
+            imageDurationOverride
         }`;
         const results = await sanityFetch(q);
         if (results?.length) {
@@ -1239,22 +1244,48 @@ async function loadPlaylist() {
 function playVideo() {
     const main = document.getElementById('mainVideo');
     const pre  = document.getElementById('preloadVideo');
+    const img  = document.getElementById('imageSlide');
+    let imageTimer = null;
+
+    function advance() {
+        currentVideoIndex = (currentVideoIndex + 1) % playlist.length;
+        doPlay(currentVideoIndex);
+    }
 
     function doPlay(idx) {
         const cur = playlist[idx];
-        main.src = cur.url;
-        main.load();
-        main.addEventListener('canplay', () => main.play().catch(() => {}), { once: true });
-        // Preload next
-        const nxt = (idx + 1) % playlist.length;
-        pre.src = playlist[nxt].url;
-        pre.load();
+        clearTimeout(imageTimer);
+
+        if (cur.mediaType === 'image') {
+            // ── Image slot ───────────────────────────────────────────────────
+            // duration = slot override ?? media default ?? 10 s
+            const secs = cur.imageDurationOverride ?? cur.defaultDuration ?? 10;
+            main.pause();
+            main.removeAttribute('src');
+            main.classList.add('video-hidden');
+            img.src = cur.url || '';
+            img.classList.remove('video-hidden');
+            imageTimer = setTimeout(advance, secs * 1000);
+        } else {
+            // ── Video slot ───────────────────────────────────────────────────
+            clearTimeout(imageTimer);
+            img.classList.add('video-hidden');
+            img.removeAttribute('src');
+            main.classList.remove('video-hidden');
+            main.src = cur.url;
+            main.load();
+            main.addEventListener('canplay', () => main.play().catch(() => {}), { once: true });
+            // Preload next video (skip preload for image slots)
+            const nxt = (currentVideoIndex + 1) % playlist.length;
+            if (playlist[nxt]?.mediaType !== 'image') {
+                pre.src = playlist[nxt].url;
+                pre.load();
+            }
+        }
     }
 
-    main.addEventListener('ended', () => {
-        currentVideoIndex = (currentVideoIndex + 1) % playlist.length;
-        doPlay(currentVideoIndex);
-    });
+    // Video natural-end handler (images use their own timer above)
+    main.addEventListener('ended', advance);
 
     doPlay(currentVideoIndex);
 }

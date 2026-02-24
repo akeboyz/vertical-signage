@@ -60,6 +60,17 @@ export default defineType({
         },
       },
     }),
+
+    // ── Image duration override ───────────────────────────────────────────────
+    // Kiosk resolution: imageDurationOverride ?? media->defaultImageDuration ?? 10
+    // Leave blank to use the media document's default. Ignored for video slots.
+    defineField({
+      name: 'imageDurationOverride',
+      title: 'Image Duration Override (seconds)',
+      type: 'number',
+      description: 'Overrides the media default for this slot only. Leave blank to inherit.',
+      validation: Rule => Rule.min(1).max(300),
+    }),
   ],
 
   orderings: [{

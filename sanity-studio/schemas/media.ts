@@ -73,6 +73,19 @@ export default defineType({
         }),
     }),
 
+    // ── Image duration ────────────────────────────────────────────────────────
+    // Kiosk resolution: playlistItem.imageDurationOverride ?? media.defaultImageDuration ?? 10
+    // Ignored entirely for video-type media (videos play their natural duration).
+    defineField({
+      name: 'defaultImageDuration',
+      title: 'Default Display Duration (seconds)',
+      type: 'number',
+      initialValue: 10,
+      hidden: ({ document }) => (document as any)?.type !== 'image',
+      description: 'How long this image shows per playlist slot. Can be overridden on individual playlist items.',
+      validation: Rule => Rule.min(1).max(300),
+    }),
+
     // ── Project assignment ────────────────────────────────────────────────────
     defineField({
       name: 'projects',
