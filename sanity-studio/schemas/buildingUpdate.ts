@@ -5,6 +5,16 @@ export default defineType({
   title: 'Building Update',
   type: 'document',
   fields: [
+    // ── Project scope ──────────────────────────────────────────────────────
+    defineField({
+      name: 'project',
+      title: 'Project',
+      type: 'reference',
+      to: [{ type: 'project' }],
+      validation: Rule => Rule.required(),
+      options: { filter: 'isActive == true' },
+    }),
+
     defineField({ name: 'title',    title: 'Title',                type: 'string', validation: Rule => Rule.required() }),
     defineField({ name: 'subtitle', title: 'Subtitle (date/period)', type: 'string' }),
     defineField({ name: 'slug',     title: 'Slug', type: 'slug', options: { source: 'title' }, validation: Rule => Rule.required() }),

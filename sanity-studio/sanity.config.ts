@@ -3,10 +3,8 @@ import { structureTool } from 'sanity/structure'
 import { visionTool } from '@sanity/vision'
 import { schemaTypes } from './schemas'
 
-// ── Replace these two values after running `npm create sanity@latest` ──────────
 const PROJECT_ID = 'awjj9g8u'
 const DATASET    = 'production'
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default defineConfig({
   name: 'vertical-signage-studio',
@@ -21,23 +19,73 @@ export default defineConfig({
         S.list()
           .title('Content')
           .items([
-            // Singleton: Category Config — always open the one document directly
+
+            // ── Projects (top-level; each project nests its own content) ──────
             S.listItem()
-              .title('Category Config')
-              .id('categoryConfig')
+              .title('Projects')
+              .schemaType('project')
               .child(
-                S.document()
-                  .schemaType('categoryConfig')
-                  .documentId('categoryConfig-singleton')
+                S.documentTypeList('project')
+                  .title('Projects')
+                  .child(projectId =>
+                    S.list()
+                      .title('Project Content')
+                      .items([
+
+                        S.listItem()
+                          .title('Category Config')
+                          .child(
+                            S.documentList()
+                              .title('Category Config')
+                              .filter('_type == "categoryConfig" && project._ref == $projectId')
+                              .params({ projectId })
+                          ),
+
+                        S.listItem()
+                          .title('Playlist')
+                          .child(
+                            S.documentList()
+                              .title('Playlist')
+                              .filter('_type == "playlistItem" && project._ref == $projectId')
+                              .params({ projectId })
+                              .defaultOrdering([{ field: 'order', direction: 'asc' }])
+                          ),
+
+                        S.listItem()
+                          .title('Providers')
+                          .child(
+                            S.documentList()
+                              .title('Providers')
+                              .filter('_type == "provider" && project._ref == $projectId')
+                              .params({ projectId })
+                          ),
+
+                        S.listItem()
+                          .title('Building Updates')
+                          .child(
+                            S.documentList()
+                              .title('Building Updates')
+                              .filter('_type == "buildingUpdate" && project._ref == $projectId')
+                              .params({ projectId })
+                              .defaultOrdering([{ field: 'publishedAt', direction: 'desc' }])
+                          ),
+
+                      ])
+                  )
               ),
+
             S.divider(),
-            S.documentTypeListItem('playlistItem').title('Playlist'),
-            S.divider(),
-            S.documentTypeListItem('provider').title('Providers'),
-            S.documentTypeListItem('buildingUpdate').title('Building Updates'),
+
+            // ── Global flat views (useful for cross-project browsing) ──────────
+            S.documentTypeListItem('playlistItem').title('All Playlists'),
+            S.documentTypeListItem('provider').title('All Providers'),
+            S.documentTypeListItem('buildingUpdate').title('All Building Updates'),
+            S.documentTypeListItem('categoryConfig').title('All Category Configs'),
+
           ]),
     }),
-    visionTool(), // GROQ query playground — useful for testing
+
+    visionTool(),
   ],
 
   schema: { types: schemaTypes },

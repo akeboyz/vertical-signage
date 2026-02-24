@@ -5,6 +5,16 @@ export default defineType({
   title: 'Provider',
   type: 'document',
   fields: [
+    // ── Project scope ──────────────────────────────────────────────────────
+    defineField({
+      name: 'project',
+      title: 'Project',
+      type: 'reference',
+      to: [{ type: 'project' }],
+      validation: Rule => Rule.required(),
+      options: { filter: 'isActive == true' },
+    }),
+
     defineField({ name: 'nameEN', title: 'Name (English)', type: 'string', validation: Rule => Rule.required() }),
     defineField({ name: 'nameTH', title: 'Name (Thai)', type: 'string' }),
     defineField({ name: 'slug', title: 'Slug', type: 'slug', options: { source: 'nameEN' }, validation: Rule => Rule.required() }),
