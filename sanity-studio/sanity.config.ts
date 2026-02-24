@@ -20,13 +20,18 @@ export default defineConfig({
           .title('Content')
           .items([
 
-            // ── Projects (top-level; each project nests its own content) ──────
+            // ── Projects — plain list; "+" opens the project create form directly ─
+            S.documentTypeListItem('project').title('Projects'),
+
+            S.divider(),
+
+            // ── Browse by Project — per-project content navigation ─────────────
+            // Separate from Projects so clicking "+" above always creates a doc.
             S.listItem()
-              .title('Projects')
-              .schemaType('project')
+              .title('Browse by Project')
               .child(
                 S.documentTypeList('project')
-                  .title('Projects')
+                  .title('Select a Project')
                   .child(projectId =>
                     S.list()
                       .title('Project Content')
