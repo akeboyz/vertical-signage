@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Premium Vertical Digital Signage</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ==================== RESET & BASE ==================== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: #000; color: #fff;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        /* ==================== LAYOUT ==================== */
+        .aspect-ratio-container {
+            position: relative; width: 100vw; height: 100vh;
+            display: flex; justify-content: center; align-items: center; background: #000;
+        }
+        .signage-container {
+            position: relative; width: 100%; height: 100%;
+            max-width: 56.25vh; max-height: 177.78vw;
+            display: grid; grid-template-rows: 14vh 79vh 7vh;
+            overflow: hidden; background: #000;
+        }
+
+        /* ==================== TOP BAR ==================== */
+        .top-bar {
+            background: linear-gradient(135deg, #001D56 0%, #002775 100%);
+            display: grid; grid-template-columns: 50fr 50fr;
+            align-items: center; padding: 1.2vh 3vh 2.5vh 3vh;
+            border-bottom: 0.5vh solid #C4682D;
+            height: 14vh; box-sizing: border-box; overflow: hidden;
+        }
+        .location-info { display: flex; flex-direction: column; justify-content: center; gap: 0.5vh; height: 100%; }
+        .city-name { font-size: 3vh; font-weight: 700; color: #fff; letter-spacing: 0.1vh; line-height: 1.2; }
+        .time-weather-row { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 1vh; }
+        .local-time {
+            font-size: 2.2vh; font-weight: 600; color: #C4682D; line-height: 1.2;
+            text-align: left; justify-self: start; font-variant-numeric: tabular-nums; min-width: 10vh;
+        }
+        .local-date { font-size: 1.4vh; color: #ccc; line-height: 1.2; }
+        .weather-info {
+            position: relative; display: flex; align-items: center; justify-content: flex-end;
+            font-size: 1.4vh; color: #fff; line-height: 1.2; justify-self: end; margin-right: 3vh;
+        }
+        .weather-icon { font-size: 4vh; line-height: 1; position: relative; z-index: 1; margin-right: -1vh; }
+        .weather-temp { font-weight: 700; font-size: 2.2vh; color: #C4682D; font-variant-numeric: tabular-nums; position: relative; z-index: 2; }
+
+        /* World Clocks */
+        .world-clocks { display: grid; grid-template-columns: repeat(3,1fr); height: 100%; width: 100%; column-gap: 1.5vh; }
+        .clock-wrapper { display: grid; grid-template-rows: 3vh 1fr; height: 100%; justify-items: center; align-items: start; width: 100%; min-width: 0; }
+        .clock-city {
+            font-size: 0.95vh; font-weight: 600; color: #fff; white-space: nowrap;
+            align-self: end; justify-self: center; line-height: 1;
+            height: 3vh; display: flex; align-items: flex-end; justify-content: center;
+            width: 100%; overflow: hidden; text-overflow: ellipsis;
+        }
+        .analog-clock {
+            width: 5.5vh; height: 5.5vh; border: 0.3vh solid #C4682D;
+            border-radius: 50%; position: relative; align-self: center; justify-self: center;
+            transition: background 0.5s ease, box-shadow 0.5s ease;
+        }
+        .analog-clock.dark-theme { background: rgba(0,29,86,0.8); box-shadow: 0 0 1vh rgba(196,104,45,0.3); }
+        .analog-clock.dark-theme .hour-hand { background: #fff; }
+        .analog-clock.dark-theme .minute-hand { background: #ccc; }
+        .analog-clock.dark-theme .second-hand { background: #C4682D; }
+        .analog-clock.light-theme { background: rgba(255,255,255,0.95); box-shadow: 0 0 1.5vh rgba(196,104,45,0.5); }
+        .analog-clock.light-theme .hour-hand { background: #001D56; }
+        .analog-clock.light-theme .minute-hand { background: #003D86; }
+        .analog-clock.light-theme .second-hand { background: #C4682D; }
+        .analog-clock.light-theme .clock-center { background: #C4682D; }
+        .clock-center {
+            width: 0.6vh; height: 0.6vh; background: #C4682D; border-radius: 50%;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 10;
+        }
+        .clock-hand { position: absolute; bottom: 50%; left: 50%; transform-origin: bottom center; border-radius: 0.25vh 0.25vh 0 0; }
+        .hour-hand { width: 0.3vh; height: 1.8vh; background: #fff; margin-left: -0.15vh; }
+        .minute-hand { width: 0.25vh; height: 2.5vh; background: #ccc; margin-left: -0.125vh; }
+        .second-hand { width: 0.2vh; height: 2.7vh; background: #C4682D; margin-left: -0.1vh; }
+
+        /* ==================== VIDEO ZONE ==================== */
+        .video-zone {
+            position: relative; background: #000;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; height: 79vh; box-sizing: border-box;
+        }
+        .video-player { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        .video-hidden { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+
+        /* ==================== MENU BUTTON (top-left overlay) ==================== */
+        .menu-btn {
+    position: absolute; top: 2.5vh; left: 2.5vh; z-index: 200;
+    background: rgba(0,10,30,0.30); color: #fff;
+    border: none;
+    border-radius: 1.2vh; padding: 1.2vh 2vh;
+    font-size: 2vh; font-family: 'Montserrat', sans-serif; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 1vh;
+    touch-action: manipulation; user-select: none;
+    box-shadow: 0 1vh 4vh rgba(0,0,0,0.40);
+    transition: background 0.15s;
+}
+.menu-btn:active { background: rgba(196,104,45,0.30); }
+        .hamburger { display: flex; flex-direction: column; gap: 0.45vh; }
+        .hamburger span { display: block; width: 2.3vh; height: 0.28vh; background: #fff; border-radius: 0.2vh; }
+
+        /* ==================== CATEGORY PANEL ==================== */
+        .category-panel {
+    position: absolute; top: 7.8vh; left: 2.5vh; z-index: 199;
+    background: rgba(0,10,30,0.30);
+    border: none;
+    border-radius: 1.2vh; padding: 0.8vh 0;
+    min-width: 26vh; display: none; flex-direction: column;
+    box-shadow: 0 1vh 4vh rgba(0,0,0,0.40);
+}
+        .category-panel.open { display: flex; }
+        .category-panel-item {
+            padding: 1.5vh 2.5vh; font-size: 1.9vh; font-weight: 600; color: #fff;
+            cursor: pointer; display: flex; align-items: center; gap: 1.4vh;
+            touch-action: manipulation; user-select: none; transition: background 0.12s;
+        }
+        .category-panel-item:active { background: rgba(196,104,45,0.28); }
+        .cat-icon { font-size: 2.2vh; }
+
+        /* ==================== TOUCH TO EXPLORE (bottom-center overlay) ==================== */
+        .touch-to-explore {
+            position: absolute; left: 50%; bottom: 4vh; transform: translateX(-50%);
+            background: rgba(196,104,45,0.30); color: #fff;
+            padding: 1.8vh 4.5vh; border-radius: 5vh;
+            font-size: 2.1vh; font-weight: 700; white-space: nowrap;
+            cursor: pointer; z-index: 100; touch-action: manipulation; user-select: none;
+            box-shadow: 0 1vh 3vh rgba(0,0,0,0.5);
+            transition: background 0.15s, transform 0.15s;
+        }
+        .touch-to-explore:active { background: rgba(196,104,45,0.30); transform: translateX(-50%) scale(0.97); }
+
+        /* ==================== CATEGORY SCREEN (full overlay) ==================== */
+        /* Video is paused when category screen opens to reduce visual distraction behind the overlay */
+        .category-screen {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 150;
+            background: linear-gradient(160deg, #001030 0%, #001D56 100%);
+            display: none; flex-direction: column; overflow: hidden;
+        }
+        .category-screen.open { display: flex; }
+        .category-screen-header {
+            display: flex; align-items: center;
+            padding: 2.5vh 2.5vh 1.5vh; flex-shrink: 0;
+            border-bottom: 0.2vh solid rgba(196,104,45,0.35); gap: 1.5vh;
+        }
+        .back-btn {
+            background: rgba(196,104,45,0.18); border: 0.2vh solid rgba(196,104,45,0.45);
+            color: #C4682D; border-radius: 50%; width: 5vh; height: 5vh;
+            font-size: 2.4vh; cursor: pointer; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            touch-action: manipulation; transition: background 0.12s;
+        }
+        .back-btn:active { background: rgba(196,104,45,0.45); }
+        .category-screen-title { font-size: 2.8vh; font-weight: 700; color: #fff; letter-spacing: 0.18vh; }
+        /* Provider grid — vertical scroll container, holds subcategory sections */
+        .provider-grid {
+            flex: 1; overflow-y: auto; padding: 0.5vh 0 2vh;
+            display: flex; flex-direction: column;
+        }
+        .provider-grid::-webkit-scrollbar { width: 0; }
+
+        /* Subcategory section */
+        .subcat-section { display: flex; flex-direction: column; }
+        .subcat-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1.4vh 2vh 0.7vh;
+            border-bottom: 0.1vh solid rgba(255,255,255,0.08);
+        }
+        .subcat-header-label {
+            font-size: 1.55vh; font-weight: 700;
+            color: rgba(255,255,255,0.88); letter-spacing: 0.04vh;
+        }
+        .subcat-header-chevron { font-size: 1.8vh; color: rgba(196,104,45,0.7); }
+
+        /* Horizontal card row inside each subcategory section */
+        .subcat-cards {
+            display: flex; flex-direction: row; gap: 1.4vh;
+            overflow-x: auto; padding: 1.2vh 2vh 1.6vh;
+        }
+        .subcat-cards::-webkit-scrollbar { height: 0; }
+
+        /* Provider card — fixed-width for horizontal scroll */
+        .provider-card {
+            background: rgba(255,255,255,0.07); border: 0.15vh solid rgba(255,255,255,0.12);
+            border-radius: 2vh; padding: 1.8vh 1.2vh 1.5vh; cursor: pointer; flex-shrink: 0;
+            width: 13.5vh; display: flex; flex-direction: column; align-items: center; gap: 0.8vh;
+            touch-action: manipulation; transition: background 0.12s, border-color 0.12s;
+        }
+        .provider-card:active { background: rgba(196,104,45,0.2); border-color: rgba(196,104,45,0.6); }
+        .provider-card-icon { font-size: 4.2vh; line-height: 1; }
+        .provider-card-name { font-size: 1.35vh; font-weight: 700; color: #fff; text-align: center; line-height: 1.3; }
+        .provider-card-sub  { font-size: 1.1vh; color: rgba(255,255,255,0.5); text-align: center; }
+
+        /* ==================== POPUP BACKDROP ==================== */
+        .popup-backdrop {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 260;
+            background: rgba(0,0,0,0.72);
+            display: none; align-items: center; justify-content: center; padding: 3vh;
+        }
+        .popup-backdrop.open { display: flex; }
+
+        /* ==================== POPUP BOX (shared base) ==================== */
+        .popup-box {
+            background: linear-gradient(160deg, #001540 0%, #001D56 100%);
+            border: 0.2vh solid rgba(196,104,45,0.45); border-radius: 3vh;
+            width: 100%; max-height: 90%; overflow-y: auto;
+            position: relative; padding: 3.5vh 2.5vh 3vh;
+            display: flex; flex-direction: column; gap: 1.4vh;
+        }
+        .popup-box::-webkit-scrollbar { width: 0; }
+        .popup-close {
+            position: absolute; top: 1.5vh; right: 1.5vh;
+            background: rgba(255,255,255,0.1); border: none; color: #fff;
+            font-size: 2vh; width: 4.5vh; height: 4.5vh; border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            touch-action: manipulation; z-index: 10; transition: background 0.12s;
+        }
+        .popup-close:active { background: rgba(196,104,45,0.55); }
+
+        /* ==================== ITEM POPUP ==================== */
+        .item-popup-cover {
+            width: 100%; height: 17vh; border-radius: 2vh;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 7vh; margin-top: 0.5vh; flex-shrink: 0;
+        }
+        .item-popup-name-en { font-size: 2.4vh; font-weight: 700; color: #fff; line-height: 1.2; }
+        .item-popup-name-th { font-size: 1.7vh; color: rgba(255,255,255,0.6); line-height: 1.3; }
+        .item-popup-meta { display: flex; gap: 1.2vh; flex-wrap: wrap; }
+        .meta-tag {
+            background: rgba(255,255,255,0.08); border-radius: 3vh;
+            padding: 0.5vh 1.4vh; font-size: 1.35vh; color: rgba(255,255,255,0.68);
+            display: flex; align-items: center; gap: 0.4vh;
+        }
+        .item-popup-description { font-size: 1.65vh; color: rgba(255,255,255,0.72); line-height: 1.65; }
+        .item-popup-contacts { display: flex; gap: 1.1vh; flex-wrap: wrap; }
+        .contact-chip {
+            background: rgba(196,104,45,0.18); border: 0.15vh solid rgba(196,104,45,0.38);
+            border-radius: 2vh; padding: 0.7vh 1.4vh;
+            font-size: 1.4vh; color: #C4682D; font-weight: 600;
+            display: flex; align-items: center; gap: 0.4vh;
+        }
+        .popup-cta-btn {
+            background: linear-gradient(135deg, #C4682D 0%, #E07935 100%);
+            color: #fff; border: none; border-radius: 2.5vh; padding: 2vh;
+            font-size: 2.1vh; font-weight: 700; font-family: 'Montserrat', sans-serif;
+            cursor: pointer; touch-action: manipulation; width: 100%;
+            text-align: center; transition: opacity 0.15s;
+        }
+        .popup-cta-btn:active { opacity: 0.82; }
+        .popup-cta-btn.secondary {
+            background: transparent; border: 0.2vh solid rgba(196,104,45,0.5); color: #C4682D;
+        }
+
+        /* ==================== UPDATE POPUP (Building Updates) ==================== */
+        .update-popup-label { font-size: 1.4vh; font-weight: 700; color: #C4682D; letter-spacing: 0.2vh; text-transform: uppercase; }
+        .update-popup-image {
+            width: 100%; height: 24vh; border-radius: 2vh;
+            display: flex; align-items: center; justify-content: center; font-size: 6vh; flex-shrink: 0;
+        }
+        .update-popup-title { font-size: 2.5vh; font-weight: 700; color: #fff; }
+        .update-popup-subtitle { font-size: 1.75vh; color: #C4682D; font-weight: 600; }
+        .update-popup-body { font-size: 1.65vh; color: rgba(255,255,255,0.72); line-height: 1.65; }
+
+        /* ==================== HANDOFF POPUP ==================== */
+        .handoff-heading { font-size: 2vh; font-weight: 700; color: #fff; text-align: center; margin-top: 0.5vh; }
+        .handoff-subheading { font-size: 1.45vh; color: rgba(255,255,255,0.55); text-align: center; }
+        .qr-wrap {
+            background: #fff; border-radius: 1.8vh; padding: 1.5vh;
+            display: flex; align-items: center; justify-content: center; align-self: center;
+        }
+        .qr-wrap img { width: 18vh; height: 18vh; display: block; }
+        .qr-url { font-size: 1.15vh; color: rgba(255,255,255,0.38); word-break: break-all; text-align: center; }
+        .handoff-unit-ref {
+            background: rgba(196,104,45,0.14); border: 0.15vh solid rgba(196,104,45,0.32);
+            border-radius: 1.5vh; padding: 1.2vh 2vh;
+            font-size: 1.65vh; color: #C4682D; font-weight: 600; text-align: center;
+        }
+        .or-divider {
+            display: flex; align-items: center; gap: 1.5vh;
+            color: rgba(255,255,255,0.3); font-size: 1.4vh;
+        }
+        .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 0.1vh; background: rgba(255,255,255,0.2); }
+        .phone-label { font-size: 1.55vh; color: rgba(255,255,255,0.68); }
+        .phone-row { display: flex; gap: 1vh; align-items: center; }
+        .phone-prefix {
+            background: rgba(255,255,255,0.08); border: 0.15vh solid rgba(255,255,255,0.2);
+            border-radius: 1.2vh; padding: 1.2vh 1.4vh; font-size: 1.75vh; color: #fff;
+            font-family: 'Montserrat', sans-serif; flex-shrink: 0;
+        }
+        .phone-input {
+            flex: 1; background: rgba(255,255,255,0.08); border: 0.15vh solid rgba(255,255,255,0.2);
+            border-radius: 1.2vh; padding: 1.2vh 1.4vh; font-size: 1.75vh; color: #fff;
+            font-family: 'Montserrat', sans-serif; outline: none;
+        }
+        .phone-input::placeholder { color: rgba(255,255,255,0.28); }
+        .phone-input:focus { border-color: rgba(196,104,45,0.65); }
+        .sms-note { font-size: 1.35vh; color: rgba(255,255,255,0.42); text-align: center; }
+        .send-confirm { font-size: 1.55vh; color: #4CAF50; text-align: center; min-height: 2vh; }
+
+        /* ==================== BOTTOM BAR ==================== */
+        .bottom-bar {
+            background: #001D56; border-top: 0.5vh solid #C4682D;
+            display: flex; align-items: center; overflow: hidden;
+            position: relative; height: 7vh; box-sizing: border-box;
+        }
+        .news-ticker { display: flex; white-space: nowrap; animation: scroll-left 479s linear infinite; }
+        .news-item { font-size: 2.2vh; padding: 0 5vh; color: #fff; }
+        .news-separator { color: #C4682D; margin: 0 2vh; }
+
+        @keyframes scroll-left {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (aspect-ratio > 9/16) { .signage-container { width: 56.25vh; height: 100vh; } }
+        @media (aspect-ratio < 9/16) { .signage-container { width: 100vw; height: 177.78vw; } }
+        @media (aspect-ratio: 9/16) { .signage-container { width: 100vw; height: 100vh; } }
+
+        /* ==================== PULSE BREATHE ANIMATIONS ==================== */
+        @keyframes pulse-breathe {
+            0%, 100% { opacity: 1;    transform: scale(1);    }
+            50%       { opacity: 0.75; transform: scale(0.965); }
+        }
+        /* .touch-to-explore has a base transform:translateX(-50%) — animating transform
+           would clobber it, so use opacity-only for that element */
+        @keyframes pulse-breathe-opacity {
+            0%, 100% { opacity: 1;    }
+            50%       { opacity: 0.75; }
+        }
+
+        .menu-btn            { animation: pulse-breathe         2.6s ease-in-out infinite; }
+        .category-panel.open { animation: pulse-breathe         2.8s ease-in-out infinite; }
+        .touch-to-explore    { animation: pulse-breathe-opacity 2.6s ease-in-out infinite; }
+
+        /* Remove animation (→ snap back to full opacity) during any active interaction.
+           "Interacting" = category screen open OR any popup open. Panel-only is NOT interacting. */
+        .is-interacting .menu-btn,
+        .is-interacting .category-panel,
+        .is-interacting .touch-to-explore { animation: none; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .menu-btn, .category-panel, .touch-to-explore { animation: none !important; }
+        }
+
+        /* ==================== IDLE COUNTDOWN BADGE ==================== */
+        #idleCountdown {
+            position: absolute; top: 2.5vh; right: 2.5vh; z-index: 210;
+            background: rgba(0,0,0,0.30); color: #fff;
+            font-size: 1.6vh; font-weight: 600; font-family: 'Montserrat', sans-serif;
+            padding: 0.9vh 1.8vh; border-radius: 3vh;
+            border: 0.15vh solid rgba(255,255,255,0.25);
+            white-space: nowrap; pointer-events: none;
+            opacity: 0; transition: opacity 0.4s ease;
+        }
+        #idleCountdown.visible { opacity: 1; }
+    </style>
+</head>
+<body>
+<div class="aspect-ratio-container">
+    <div class="signage-container">
+
+        <!-- ===== TOP BAR (14vh) ===== -->
+        <div class="top-bar">
+            <div class="location-info">
+                <div class="city-name">BANGKOK</div>
+                <div class="time-weather-row">
+                    <div class="local-time" id="localTime">00:00:00</div>
+                    <div class="weather-info">
+                        <span class="weather-icon" id="weatherIcon">⛅</span>
+                        <span class="weather-temp" id="weatherTemp">--°C</span>
+                    </div>
+                </div>
+                <div class="local-date" id="localDate">Loading...</div>
+            </div>
+            <div class="world-clocks">
+                <div class="clock-wrapper">
+                    <div class="clock-city" id="city1">Singapore</div>
+                    <div class="analog-clock" id="clock1">
+                        <div class="clock-hand hour-hand" id="hour1"></div>
+                        <div class="clock-hand minute-hand" id="minute1"></div>
+                        <div class="clock-hand second-hand" id="second1"></div>
+                        <div class="clock-center"></div>
+                    </div>
+                </div>
+                <div class="clock-wrapper">
+                    <div class="clock-city" id="city2">Hong Kong</div>
+                    <div class="analog-clock" id="clock2">
+                        <div class="clock-hand hour-hand" id="hour2"></div>
+                        <div class="clock-hand minute-hand" id="minute2"></div>
+                        <div class="clock-hand second-hand" id="second2"></div>
+                        <div class="clock-center"></div>
+                    </div>
+                </div>
+                <div class="clock-wrapper">
+                    <div class="clock-city" id="city3">Tokyo</div>
+                    <div class="analog-clock" id="clock3">
+                        <div class="clock-hand hour-hand" id="hour3"></div>
+                        <div class="clock-hand minute-hand" id="minute3"></div>
+                        <div class="clock-hand second-hand" id="second3"></div>
+                        <div class="clock-center"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== MIDDLE ZONE (79vh) — Video + All Overlays ===== -->
+        <div class="video-zone" id="videoZone">
+            <!-- Video players -->
+            <video class="video-player" id="mainVideo" autoplay muted playsinline></video>
+            <video class="video-player video-hidden" id="preloadVideo" preload="auto" muted playsinline></video>
+
+            <!-- ☰ Menu Button (top-left, z:200) -->
+            <button class="menu-btn" id="menuBtn">
+                <div class="hamburger"><span></span><span></span><span></span></div>
+                Menu
+            </button>
+
+            <!-- Category Panel (dropdown under Menu, z:199) -->
+            <div class="category-panel" id="categoryPanel">
+                <div class="category-panel-item" data-cat="food"><span class="cat-icon">🍽️</span>Food</div>
+                <div class="category-panel-item" data-cat="groceries"><span class="cat-icon">🛒</span>Groceries</div>
+                <div class="category-panel-item" data-cat="services"><span class="cat-icon">🔧</span>Services</div>
+                <div class="category-panel-item" data-cat="rent"><span class="cat-icon">🏠</span>For Rent</div>
+                <div class="category-panel-item" data-cat="sale"><span class="cat-icon">🏷️</span>For Sale</div>
+                <div class="category-panel-item" data-cat="building-updates"><span class="cat-icon">📢</span>Building Updates</div>
+            </div>
+
+            <!-- Touch to Explore (bottom-center, z:100) -->
+            <div class="touch-to-explore" id="touchToExplore">✦ Touch to Explore</div>
+
+            <!-- ===== CATEGORY SCREEN (full-overlay, z:150) ===== -->
+            <!-- Video is paused when this opens to reduce background distraction -->
+            <div class="category-screen" id="categoryScreen">
+                <div class="category-screen-header">
+                    <button class="back-btn" id="backBtn">&#8592;</button>
+                    <div class="category-screen-title" id="categoryScreenTitle">FOOD</div>
+                </div>
+                <div class="provider-grid" id="providerGrid"></div>
+            </div>
+
+            <!-- ===== ITEM POPUP (z:260 via backdrop) ===== -->
+            <div class="popup-backdrop" id="itemBackdrop">
+                <div class="popup-box" id="itemPopupBox">
+                    <button class="popup-close" id="itemClose">✕</button>
+                    <div class="item-popup-cover" id="itemCover"></div>
+                    <div class="item-popup-name-en" id="itemNameEN"></div>
+                    <div class="item-popup-name-th" id="itemNameTH"></div>
+                    <div class="item-popup-meta" id="itemMeta"></div>
+                    <div class="item-popup-description" id="itemDesc"></div>
+                    <div class="item-popup-contacts" id="itemContacts"></div>
+                    <button class="popup-cta-btn" id="itemCtaBtn"></button>
+                </div>
+            </div>
+
+            <!-- ===== UPDATE POPUP — Building Updates only (z:260 via backdrop) ===== -->
+            <div class="popup-backdrop" id="updateBackdrop">
+                <div class="popup-box" id="updatePopupBox">
+                    <button class="popup-close" id="updateClose">✕</button>
+                    <div class="update-popup-label">📢 Building Update</div>
+                    <div class="update-popup-image" id="updateImage"></div>
+                    <div class="update-popup-title" id="updateTitle"></div>
+                    <div class="update-popup-subtitle" id="updateSubtitle"></div>
+                    <div class="update-popup-body" id="updateBody"></div>
+                </div>
+            </div>
+
+            <!-- ===== HANDOFF POPUP (z:260 via backdrop) ===== -->
+            <div class="popup-backdrop" id="handoffBackdrop">
+                <div class="popup-box" id="handoffPopupBox">
+                    <button class="popup-close" id="handoffClose">✕</button>
+                    <div class="handoff-heading" id="handoffHeading">Scan to Continue</div>
+                    <div class="handoff-subheading" id="handoffSubheading">Scan the QR code with your phone</div>
+                    <div class="qr-wrap"><img id="qrImage" src="" alt="QR Code" width="180" height="180"></div>
+                    <div class="qr-url" id="qrUrl"></div>
+                    <div class="handoff-unit-ref" id="handoffUnitRef" style="display:none;"></div>
+                    <div class="or-divider">or</div>
+                    <div class="phone-label">Send a link to your phone</div>
+                    <div class="phone-row">
+                        <div class="phone-prefix">+66</div>
+                        <input class="phone-input" id="phoneInput" type="tel" inputmode="numeric" maxlength="10" placeholder="8X XXX XXXX">
+                    </div>
+                    <div class="sms-note">We will send you a link to this listing via SMS</div>
+                    <div class="send-confirm" id="sendConfirm"></div>
+                    <button class="popup-cta-btn" id="sendLinkBtn">Send Link</button>
+                </div>
+            </div>
+
+            <!-- Idle countdown badge (top-right, shown during last 30s of idle) -->
+            <div id="idleCountdown">Returning to Main in 30s</div>
+
+        </div><!-- end video-zone -->
+
+        <!-- ===== BOTTOM BAR (7vh) ===== -->
+        <div class="bottom-bar">
+            <div class="news-ticker" id="newsTicker">
+                <span class="news-item">Loading news...</span>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+/* ========================================================
+   CONFIGURATION
+======================================================== */
+const CONFIG = {
+    WEATHER_API_KEY: '7c215a78c991666a91e771892ee2aaba',
+    NEWS_API_KEY: 'pub_01dc3f585ecf4d3c8a65986f0025f6d4',
+    BANGKOK_LAT: 13.7563,
+    BANGKOK_LON: 100.5018,
+    CACHE_DURATION: 3600000,        // 1 hour
+    CITY_ROTATION_INTERVAL: 8000,   // 8 seconds
+    IDLE_TIMEOUT: 60000,            // 60 seconds — applied to Category, Item, Handoff states
+    HANDOFF_BASE: 'https://aquamax.co/m',
+
+    // ── Sanity CMS ────────────────────────────────────────────────────────────
+    // Fill these in after running `npm create sanity@latest` in sanity-studio/
+    SANITY_PROJECT_ID: 'awjj9g8u',   // e.g. 'ab12cd34'
+    SANITY_DATASET:    'production',
+    SANITY_API_VER:    '2024-01-01',
+    // Read-only API token (Settings → API → Tokens in sanity.io/manage)
+    SANITY_TOKEN:      'skOqU4MijlSvuIgOEFJpYJmL9komvn0FqXxGVpVTnjWqQUwwGSwTilLkHcys2gqe36f7UpFwBP7lAnbYo3Ti5FOzdgDDKaqfoNi62BLklEmThXJAplBy1ZCkPKHsdLFC8sD8HXSnNVs8Kw5RgRoqoose6WKe5ZqtqMG6BQBCcnrzpcdkX2yL',
+    // ─────────────────────────────────────────────────────────────────────────
+};
+
+/* ========================================================
+   MOCK DATA — Providers per category (placeholder until CMS)
+======================================================== */
+const MOCK_PROVIDERS = {
+    food: [
+        { slug:'the-pizza-company', nameEN:'The Pizza Company', nameTH:'เดอะ พิซซ่า คอมพานี', icon:'🍕', coverColor:'#5C1010', location:'Floor 2, Zone A', hours:'10:00–22:00', phone:'+66 2 123 4567', line:'@pizzacompany', description:'Premium Italian-style pizza with fresh ingredients. Dine-in, takeaway & delivery available every day.', subCategoryIds:['dine_in','delivery','promotions'] },
+        { slug:'fuji-restaurant',  nameEN:'Fuji Restaurant',    nameTH:'ร้านอาหารฟูจิ',        icon:'🍱', coverColor:'#0E2A46', location:'Floor 1, Zone C', hours:'11:00–21:30', phone:'+66 2 234 5678', line:'@fujirest',     description:'Authentic Japanese cuisine — sushi, ramen, and teppanyaki cooked fresh to order.',              subCategoryIds:['dine_in','recommended'] },
+        { slug:'pepper-lunch',     nameEN:'Pepper Lunch',        nameTH:'เปปเปอร์ ลันช์',       icon:'🥩', coverColor:'#3A1800', location:'Floor 3, Zone B', hours:'10:30–21:00', phone:'+66 2 345 6789', line:'@pepperlunch',  description:'Sizzling hot-plate meals — beef, salmon, and chicken served on a 260°C iron plate.',             subCategoryIds:['dine_in','promotions'] },
+        { slug:'ootoya',           nameEN:'Ootoya',              nameTH:'โอโตยะ',               icon:'🍜', coverColor:'#0E3018', location:'Floor 2, Zone D', hours:'11:00–22:00', phone:'+66 2 456 7890', line:'@ootoya',       description:'Healthy home-style Japanese set meals with freshly prepared sides and miso soup.',               subCategoryIds:['dine_in','recommended'] },
+    ],
+    groceries: [
+        { slug:'tops-market',    nameEN:'Tops Market',    nameTH:'ท็อปส์ มาร์เก็ต',   icon:'🛒', coverColor:'#003818', location:'Floor B1',         hours:'08:00–22:00', phone:'+66 2 567 8901', line:'@topsmarket',  description:'Full-range supermarket with fresh produce, international brands, and a bakery section.',   subCategoryIds:['fresh_produce','snack_drinks','household'] },
+        { slug:'villa-market',   nameEN:'Villa Market',   nameTH:'วิลล่า มาร์เก็ต',   icon:'🥗', coverColor:'#2A2800', location:'Floor B1, Zone A', hours:'07:00–22:30', phone:'+66 2 678 9012', line:'@villamarket', description:'Premium grocery store with imported goods, organic produce, and a gourmet deli counter.', subCategoryIds:['fresh_produce','dairy_eggs','organic'] },
+        { slug:'gourmet-market', nameEN:'Gourmet Market', nameTH:'กูร์เมต์ มาร์เก็ต', icon:'🧀', coverColor:'#3A1200', location:'Floor B2',         hours:'08:00–22:00', phone:'+66 2 789 0123', line:'@gourmetmkt',  description:'Upscale grocery with fine cheeses, charcuterie, premium wines, and specialty imports.',    subCategoryIds:['dairy_eggs','organic','snack_drinks'] },
+    ],
+    services: [
+        { slug:'true-move',     nameEN:'True Move H',         nameTH:'ทรู มูฟ เอช',          icon:'📱', coverColor:'#001A3A', location:'Floor 1, Zone A', hours:'10:00–21:00', phone:'+66 2 890 1234', line:'@truemoveh',    description:'Mobile plans, broadband, and device upgrades. Exclusive in-store promotions available.', subCategoryIds:['repair_maintenance'] },
+        { slug:'beauty-studio', nameEN:'The Beauty Studio',   nameTH:'เดอะ บิวตี้ สตูดิโอ',  icon:'💇', coverColor:'#2A083A', location:'Floor 4, Zone B', hours:'10:00–20:00', phone:'+66 2 901 2345', line:'@beautystudio', description:'Full-service hair salon — cuts, coloring, treatments, and nail services for all genders.', subCategoryIds:['cleaning','pet_services'] },
+        { slug:'smile-dental',  nameEN:'Smile Dental Clinic', nameTH:'สไมล์ เดนทัล คลินิก', icon:'🦷', coverColor:'#082238', location:'Floor 5, Zone C', hours:'09:00–18:00', phone:'+66 2 012 3456', line:'@smiledental',  description:'General dentistry, whitening, orthodontics, and dental implants. Walk-ins welcome.',      subCategoryIds:['repair_maintenance'] },
+    ],
+    rent: [
+        { slug:'unit-a1203', nameEN:'Unit A-1203', nameTH:'ยูนิต A-1203', icon:'🏠', coverColor:'#101C28', location:'Tower A, Floor 12', hours:'By Appointment', phone:'+66 2 111 2222', line:'@mbkrent', description:'2-bed 2-bath corner unit with panoramic city view. 75 sqm. Fully furnished. Available March 2026.', unitRef:'Unit: A-1203', subCategoryIds:['most_recent','two_bed_up'] },
+        { slug:'unit-b0805', nameEN:'Unit B-0805', nameTH:'ยูนิต B-0805', icon:'🏡', coverColor:'#102018', location:'Tower B, Floor 8',  hours:'By Appointment', phone:'+66 2 333 4444', line:'@mbkrent', description:'Studio unit with pool access. 38 sqm. Partially furnished. Great for urban professionals.',       unitRef:'Unit: B-0805', subCategoryIds:['most_recent','good_deal','one_bed'] },
+        { slug:'unit-c0302', nameEN:'Unit C-0302', nameTH:'ยูนิต C-0302', icon:'🏘️', coverColor:'#180C28', location:'Tower C, Floor 3',  hours:'By Appointment', phone:'+66 2 555 6666', line:'@mbkrent', description:'1-bed 1-bath with balcony. 55 sqm. Near BTS. Pet-friendly building with communal garden.',     unitRef:'Unit: C-0302', subCategoryIds:['one_bed','good_deal'] },
+    ],
+    sale: [
+        { slug:'unit-c2201', nameEN:'Unit C-2201', nameTH:'ยูนิต C-2201', icon:'🏢', coverColor:'#201800', location:'Tower C, Floor 22', hours:'By Appointment', phone:'+66 2 777 8888', line:'@mbksale', description:'Premium 3-bed penthouse. 150 sqm. Panoramic view. Private elevator. Luxury finishes throughout.', unitRef:'Unit: C-2201', subCategoryIds:['two_bed_up','good_deal'] },
+        { slug:'unit-d1105', nameEN:'Unit D-1105', nameTH:'ยูนิต D-1105', icon:'🏗️', coverColor:'#001C1C', location:'Tower D, Floor 11', hours:'By Appointment', phone:'+66 2 999 0000', line:'@mbksale', description:'2-bed 2-bath. 90 sqm. East-facing with greenery view. Ready to move in. No agent fees.',         unitRef:'Unit: D-1105', subCategoryIds:['most_recent','two_bed_up','good_deal'] },
+    ],
+    'building-updates': [] // uses MOCK_UPDATES
+};
+
+const MOCK_UPDATES = [
+    { slug:'renovation-floor3',  title:'Floor 3 Renovation',  subtitle:'Closure: 1–15 Mar 2026', icon:'🔨', bgColor:'#141A08', description:'Zone C on Floor 3 will be closed for renovation works. Alternative access is available via the Zone B staircase and west service elevator. We apologize for any inconvenience.', subCategoryIds:['alert','most_recent'] },
+    { slug:'new-tenant-opening', title:'New Tenant Opening',   subtitle:'Opening: 1 Mar 2026',    icon:'🎉', bgColor:'#081430', description:'We are pleased to welcome "Botanica Café" to Floor 2, Zone A. Grand opening with complimentary coffee for the first 100 guests on 1 March 2026.',                          subCategoryIds:['most_recent'] },
+    { slug:'parking-notice',     title:'Parking B2 Closure',  subtitle:'15–20 Mar 2026',          icon:'🚗', bgColor:'#201000', description:'Basement B2 Section D will be closed for electrical upgrades. Additional parking is available at the rooftop level during this period.',                                    subCategoryIds:['alert','most_recent'] },
+];
+
+const CAT_LABELS = {
+    food: 'FOOD', groceries: 'GROCERIES', services: 'SERVICES',
+    rent: 'FOR RENT', sale: 'FOR SALE', 'building-updates': 'BUILDING UPDATES'
+};
+const CAT_CTA = {
+    food: 'View Menu', groceries: 'View Items', services: 'View Service',
+    rent: 'View Listing', sale: 'View Listing'
+};
+
+// Maps panel cat IDs → category-config.json category IDs where they differ
+const CAT_ID_MAP = { 'building-updates': 'updates' };
+
+/* ========================================================
+   SANITY FETCH — shared GROQ query helper
+   Falls back gracefully: if project ID is not set or
+   request fails, callers catch and use mock/local data.
+======================================================== */
+async function sanityFetch(query) {
+    if (CONFIG.SANITY_PROJECT_ID === 'YOUR_PROJECT_ID') {
+        throw new Error('Sanity project ID not configured');
+    }
+    const url = `https://${CONFIG.SANITY_PROJECT_ID}.api.sanity.io`
+              + `/v${CONFIG.SANITY_API_VER}/data/query/${CONFIG.SANITY_DATASET}`
+              + `?query=${encodeURIComponent(query)}`;
+    const r = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${CONFIG.SANITY_TOKEN}` }
+    });
+    if (!r.ok) throw new Error(`Sanity ${r.status}`);
+    const d = await r.json();
+    return d.result;
+}
+
+/* ========================================================
+   CATEGORY CONFIG — fetched from category-config.json
+   Falls back to embedded constant if fetch fails.
+======================================================== */
+const FALLBACK_CATEGORY_CONFIG = {"categories":[{"id":"food","label":{"en":"Food","th":"อาหาร"},"ctaItem":{"en":"View Menu","th":"ดูเมนู"},"subcategories":[{"id":"dine_in","label":{"en":"Dine-in","th":"ทานที่ร้าน"},"order":1},{"id":"delivery","label":{"en":"Delivery","th":"เดลิเวอรี่"},"order":2},{"id":"recommended","label":{"en":"Recommended","th":"แนะนำ"},"order":3},{"id":"thai_cuisine","label":{"en":"Thai Cuisine","th":"อาหารไทย"},"order":4},{"id":"vegan","label":{"en":"Vegan","th":"วีแกน"},"order":5},{"id":"coffee","label":{"en":"Coffee","th":"กาแฟ"},"order":6},{"id":"dessert","label":{"en":"Dessert","th":"ของหวาน"},"order":7},{"id":"promotions","label":{"en":"Promotions","th":"โปรโมชั่น"},"order":8}],"fallbackSubcategoryId":"recommended"},{"id":"groceries","label":{"en":"Groceries","th":"ของใช้/ของชำ"},"ctaItem":{"en":"View Items","th":"ดูสินค้า"},"subcategories":[{"id":"fresh_produce","label":{"en":"Fresh Produce","th":"ผักผลไม้"},"order":1},{"id":"dairy_eggs","label":{"en":"Dairy & Eggs","th":"นมและไข่"},"order":2},{"id":"meat_seafood","label":{"en":"Meat & Seafood","th":"เนื้อและซีฟู้ด"},"order":3},{"id":"snack_drinks","label":{"en":"Snack & Drinks","th":"ขนมและเครื่องดื่ม"},"order":4},{"id":"ready_to_eat","label":{"en":"Ready-to-Eat","th":"อาหารพร้อมทาน"},"order":5},{"id":"household","label":{"en":"Household","th":"ของใช้ในบ้าน"},"order":6},{"id":"organic","label":{"en":"Organic","th":"ออร์แกนิก"},"order":7},{"id":"drug_store","label":{"en":"Drug Store","th":"ร้านยา/ของดูแลสุขภาพ"},"order":8},{"id":"promotions","label":{"en":"Promotions","th":"โปรโมชั่น"},"order":9},{"id":"store_24hr","label":{"en":"24-hr Store","th":"เปิด 24 ชม."},"order":10}],"fallbackSubcategoryId":"fresh_produce"},{"id":"services","label":{"en":"Services","th":"บริการ"},"ctaItem":{"en":"View Service","th":"ดูบริการ"},"subcategories":[{"id":"cleaning","label":{"en":"Cleaning","th":"ทำความสะอาด"},"order":1},{"id":"repair_maintenance","label":{"en":"Repair & Maintenance","th":"ซ่อมและบำรุงรักษา"},"order":2},{"id":"renovation_interior","label":{"en":"Renovation & Interior","th":"รีโนเวทและตกแต่งภายใน"},"order":3},{"id":"moving_delivery","label":{"en":"Moving & Delivery","th":"ขนย้ายและส่งของ"},"order":4},{"id":"laundry_dry_clean","label":{"en":"Laundry & Dry Clean","th":"ซักรีด"},"order":5},{"id":"pet_services","label":{"en":"Pet Services","th":"บริการสัตว์เลี้ยง"},"order":6}],"fallbackSubcategoryId":"cleaning"},{"id":"rent","label":{"en":"For Rent","th":"ให้เช่า"},"ctaItem":{"en":"View Listing","th":"ดูประกาศ"},"subcategories":[{"id":"most_recent","label":{"en":"Most recent","th":"ล่าสุด"},"order":1},{"id":"good_deal","label":{"en":"Good deal","th":"ราคาดี"},"order":2},{"id":"one_bed","label":{"en":"One-Bed","th":"1 ห้องนอน"},"order":3},{"id":"two_bed_up","label":{"en":"Two-Bed and up","th":"2 ห้องนอนขึ้นไป"},"order":4}],"fallbackSubcategoryId":"most_recent"},{"id":"sale","label":{"en":"For Sale","th":"ขาย"},"ctaItem":{"en":"View Listing","th":"ดูประกาศ"},"subcategories":[{"id":"most_recent","label":{"en":"Most recent","th":"ล่าสุด"},"order":1},{"id":"good_deal","label":{"en":"Good deal","th":"ราคาดี"},"order":2},{"id":"one_bed","label":{"en":"One-Bed","th":"1 ห้องนอน"},"order":3},{"id":"two_bed_up","label":{"en":"Two-Bed and up","th":"2 ห้องนอนขึ้นไป"},"order":4}],"fallbackSubcategoryId":"most_recent"},{"id":"updates","label":{"en":"Building Updates","th":"ประกาศอาคาร"},"ctaItem":{"en":"View more notice","th":"ดูประกาศเพิ่มเติม"},"subcategories":[{"id":"most_recent","label":{"en":"Most recent","th":"ล่าสุด"},"order":1},{"id":"alert","label":{"en":"Alert","th":"แจ้งเตือน"},"order":2}],"fallbackSubcategoryId":"most_recent"}]};
+
+let categoryConfig = FALLBACK_CATEGORY_CONFIG;
+
+async function loadCategoryConfig() {
+    // 1) Try Sanity (singleton document stored with id 'categoryConfig-singleton')
+    try {
+        const q = `*[_type == "categoryConfig" && _id == "categoryConfig-singleton"][0]{
+            categories[]{
+                id, label, ctaItem, fallbackSubcategoryId,
+                subcategories[]{ id, label, order }
+            }
+        }`;
+        const result = await sanityFetch(q);
+        if (result?.categories?.length) {
+            categoryConfig = result;
+            console.log('Category config loaded from Sanity');
+            return;
+        }
+    } catch(e) { console.warn('Sanity categoryConfig unavailable:', e.message); }
+
+    // 2) Try local category-config.json
+    try {
+        const r = await fetch('category-config.json');
+        if (!r.ok) throw new Error();
+        const d = await r.json();
+        if (d.categories?.length) { categoryConfig = d; console.log('Category config loaded from JSON'); }
+    } catch(e) { console.warn('category-config.json unavailable, using embedded fallback'); }
+}
+
+/* Fetch providers from Sanity and merge into MOCK_PROVIDERS by category.
+   Mock data remains as fallback for any category that returns nothing. */
+async function loadProviders() {
+    try {
+        const q = `*[_type == "provider"]{
+            "slug": slug.current,
+            nameEN, nameTH, icon, coverColor,
+            description, category, subCategoryIds,
+            details[]{label, value},
+            media[]{"fileUrl": file.asset->url, title}
+        }`;
+        const results = await sanityFetch(q);
+        if (!results?.length) return;
+        // Group by category and override the matching MOCK_PROVIDERS bucket
+        const grouped = {};
+        results.forEach(p => {
+            if (!grouped[p.category]) grouped[p.category] = [];
+            grouped[p.category].push(p);
+        });
+        Object.keys(grouped).forEach(cat => { MOCK_PROVIDERS[cat] = grouped[cat]; });
+        console.log('Providers loaded from Sanity');
+    } catch(e) { console.warn('Sanity providers unavailable, using mock data:', e.message); }
+}
+
+/* Fetch building updates from Sanity; replaces MOCK_UPDATES in-place. */
+async function loadBuildingUpdates() {
+    try {
+        const q = `*[_type == "buildingUpdate"] | order(publishedAt desc){
+            "slug": slug.current,
+            title, subtitle, icon, bgColor, description, subCategoryIds
+        }`;
+        const results = await sanityFetch(q);
+        if (!results?.length) return;
+        MOCK_UPDATES.splice(0, MOCK_UPDATES.length, ...results);
+        console.log('Building updates loaded from Sanity');
+    } catch(e) { console.warn('Sanity building updates unavailable, using mock data:', e.message); }
+}
+
+/* ========================================================
+   APPLICATION STATE
+======================================================== */
+const S = {
+    screen: 'main',        // 'main' | 'category'
+    panelOpen: false,
+    popup: null,           // null | 'item' | 'update' | 'handoff'
+    category: null,
+    provider: null,
+    update: null,
+    idleTimer: null,
+    countdownInterval: null,
+    videoPaused: false     // true when video was paused by category screen
+};
+
+/* ========================================================
+   IDLE TIMER — applies when screen=category or popup is open
+======================================================== */
+function resetIdle() {
+    // Cancel any running timers and hide the countdown badge immediately
+    clearTimeout(S.idleTimer);
+    clearInterval(S.countdownInterval);
+    S.countdownInterval = null;
+    hideIdleCountdown();
+
+    if (S.panelOpen || S.screen === 'category' || S.popup !== null) {
+        // Phase 1: wait 30s then start the visible countdown
+        S.idleTimer = setTimeout(() => {
+            let remaining = 30;
+            showIdleCountdown(remaining);
+            // Phase 2: tick every 1s for the remaining 30s
+            S.countdownInterval = setInterval(() => {
+                remaining -= 1;
+                if (remaining <= 0) {
+                    clearInterval(S.countdownInterval);
+                    S.countdownInterval = null;
+                    returnToMain();
+                } else {
+                    showIdleCountdown(remaining);
+                }
+            }, 1000);
+        }, 30000); // show countdown after 30s of inactivity
+    }
+}
+
+function showIdleCountdown(seconds) {
+    const el = document.getElementById('idleCountdown');
+    el.textContent = `Returning to Main in ${seconds}s`;
+    el.classList.add('visible');
+}
+
+function hideIdleCountdown() {
+    const el = document.getElementById('idleCountdown');
+    if (el) el.classList.remove('visible');
+}
+
+function returnToMain() {
+    // Silently close everything and return to attract loop
+    // Video continues from current index — NOT restarted
+    S.panelOpen = false; S.popup = null; S.screen = 'main';
+    S.category = null; S.provider = null; S.update = null;
+
+    document.getElementById('categoryPanel').classList.remove('open');
+    document.getElementById('categoryScreen').classList.remove('open');
+    document.getElementById('itemBackdrop').classList.remove('open');
+    document.getElementById('updateBackdrop').classList.remove('open');
+    document.getElementById('handoffBackdrop').classList.remove('open');
+    showMainOverlays(true);
+
+    if (S.videoPaused) {
+        document.getElementById('mainVideo').play().catch(() => {});
+        S.videoPaused = false;
+    }
+    clearTimeout(S.idleTimer);
+    clearInterval(S.countdownInterval);
+    S.countdownInterval = null;
+    hideIdleCountdown();
+    syncInteractingClass();
+}
+
+function syncInteractingClass() {
+    // "Interacting" = category screen open OR any popup open.
+    // Panel-open alone is still attract mode → no class.
+    document.body.classList.toggle('is-interacting',
+        S.screen === 'category' || S.popup !== null);
+}
+
+// Reset idle on any interaction
+document.addEventListener('touchstart', resetIdle, { passive: true });
+document.addEventListener('click', resetIdle, { passive: true });
+
+/* ========================================================
+   HELPERS
+======================================================== */
+function showMainOverlays(show) {
+    const d = show ? '' : 'none';
+    document.getElementById('menuBtn').style.display = d;
+    document.getElementById('touchToExplore').style.display = d;
+}
+
+/* ========================================================
+   MENU BUTTON & CATEGORY PANEL
+======================================================== */
+document.getElementById('menuBtn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    S.panelOpen = !S.panelOpen;
+    document.getElementById('categoryPanel').classList.toggle('open', S.panelOpen);
+    resetIdle();
+});
+
+// Category panel items
+document.getElementById('categoryPanel').querySelectorAll('.category-panel-item').forEach(item => {
+    item.addEventListener('click', function() {
+        openCategoryScreen(this.dataset.cat);
+    });
+});
+
+// Close panel when tapping elsewhere inside video zone
+document.getElementById('videoZone').addEventListener('click', function(e) {
+    if (!S.panelOpen) return;
+    const panel = document.getElementById('categoryPanel');
+    const menuBtn = document.getElementById('menuBtn');
+    if (!panel.contains(e.target) && !menuBtn.contains(e.target)) {
+        S.panelOpen = false;
+        panel.classList.remove('open');
+    }
+});
+
+/* ========================================================
+   CATEGORY SCREEN
+======================================================== */
+function openCategoryScreen(cat) {
+    S.panelOpen = false;
+    document.getElementById('categoryPanel').classList.remove('open');
+    S.screen = 'category';
+    S.category = cat;
+
+    // Resolve config entry (panel uses 'building-updates', config uses 'updates')
+    const configId = CAT_ID_MAP[cat] || cat;
+    const catConfig = categoryConfig.categories.find(c => c.id === configId);
+    const isUpdates = (cat === 'building-updates' || cat === 'updates');
+
+    // Title from config if available, else fallback map
+    document.getElementById('categoryScreenTitle').textContent =
+        catConfig ? catConfig.label.en.toUpperCase() : (CAT_LABELS[cat] || cat.toUpperCase());
+
+    // Build sectioned provider list
+    const grid = document.getElementById('providerGrid');
+    grid.innerHTML = '';
+
+    const allItems = isUpdates ? MOCK_UPDATES : (MOCK_PROVIDERS[cat] || []);
+
+    if (catConfig && catConfig.subcategories.length > 0) {
+        const sortedSubs = [...catConfig.subcategories].sort((a, b) => a.order - b.order);
+        const fallbackId = catConfig.fallbackSubcategoryId;
+
+        // Items with no matching subcategory go into the fallback section
+        const orphans = allItems.filter(item => {
+            const ids = item.subCategoryIds || [];
+            return ids.length === 0 || !sortedSubs.some(s => ids.includes(s.id));
+        });
+
+        sortedSubs.forEach(subcat => {
+            const matched = allItems.filter(item => (item.subCategoryIds || []).includes(subcat.id));
+            const extras  = subcat.id === fallbackId ? orphans : [];
+            const sectionItems = matched.concat(extras.filter(o => !matched.includes(o)));
+            if (sectionItems.length === 0) return; // skip empty sections
+
+            const section = document.createElement('div');
+            section.className = 'subcat-section';
+
+            const header = document.createElement('div');
+            header.className = 'subcat-header';
+            header.innerHTML = `<span class="subcat-header-label">${subcat.label.en}</span><span class="subcat-header-chevron">›</span>`;
+            section.appendChild(header);
+
+            const row = document.createElement('div');
+            row.className = 'subcat-cards';
+            sectionItems.forEach(item => {
+                const card = isUpdates
+                    ? makeCard(item.icon, item.title, item.subtitle)
+                    : makeCard(item.icon, item.nameEN, item.details?.[0]?.value ?? '');
+                card.addEventListener('click', () =>
+                    isUpdates ? openUpdatePopup(item) : openItemPopup(item, cat));
+                row.appendChild(card);
+            });
+            section.appendChild(row);
+            grid.appendChild(section);
+        });
+    } else {
+        // Fallback: no config found — render flat list (original behavior)
+        allItems.forEach(item => {
+            const card = isUpdates
+                ? makeCard(item.icon, item.title, item.subtitle)
+                : makeCard(item.icon, item.nameEN, item.details?.[0]?.value ?? '');
+            card.addEventListener('click', () =>
+                isUpdates ? openUpdatePopup(item) : openItemPopup(item, cat));
+            grid.appendChild(card);
+        });
+    }
+
+    document.getElementById('categoryScreen').classList.add('open');
+    showMainOverlays(false); // hide menu btn and touch-to-explore while category screen is open
+
+    // Pause video to reduce distraction behind the category screen overlay
+    const vid = document.getElementById('mainVideo');
+    if (!vid.paused) { vid.pause(); S.videoPaused = true; }
+
+    resetIdle();
+    syncInteractingClass();
+}
+
+function makeCard(icon, name, sub) {
+    const card = document.createElement('div');
+    card.className = 'provider-card';
+    card.innerHTML = `
+        <div class="provider-card-icon">${icon}</div>
+        <div class="provider-card-name">${name}</div>
+        <div class="provider-card-sub">${sub}</div>`;
+    return card;
+}
+
+document.getElementById('backBtn').addEventListener('click', closeCategoryScreen);
+
+function closeCategoryScreen() {
+    S.screen = 'main';
+    document.getElementById('categoryScreen').classList.remove('open');
+    showMainOverlays(true);
+    if (S.videoPaused) {
+        document.getElementById('mainVideo').play().catch(() => {});
+        S.videoPaused = false;
+    }
+    clearTimeout(S.idleTimer);
+    syncInteractingClass();
+}
+
+/* ========================================================
+   TOUCH TO EXPLORE
+======================================================== */
+document.getElementById('touchToExplore').addEventListener('click', function() {
+    const cur = playlist[currentVideoIndex];
+    if (isBuildingUpdates(cur)) {
+        openCategoryScreen('building-updates');
+    } else {
+        // Default: open first food provider as placeholder for current video
+        // (replace with CMS mapping once category field is added to playlist.json)
+        openItemPopup(MOCK_PROVIDERS.food[0], 'food');
+    }
+});
+
+function isBuildingUpdates(video) {
+    if (!video) return false;
+    const cta = (video.cta_en || '').toLowerCase();
+    const file = (video.url || '').split('/').pop().toLowerCase();
+    return cta.includes('learn more') || cta.includes('view building') || file.includes('sintel');
+}
+
+/* ========================================================
+   ITEM POPUP
+======================================================== */
+function openItemPopup(provider, cat) {
+    S.provider = provider; S.category = cat; S.popup = 'item';
+
+    document.getElementById('itemCover').style.background = provider.coverColor || '#102030';
+    document.getElementById('itemCover').textContent = provider.icon;
+    document.getElementById('itemNameEN').textContent = provider.nameEN;
+    document.getElementById('itemNameTH').textContent = provider.nameTH;
+
+    document.getElementById('itemMeta').innerHTML = (provider.details || [])
+        .map(d => `<div class="meta-tag">${d.label ? d.label + ' ' : ''}${d.value || ''}</div>`)
+        .join('');
+
+    document.getElementById('itemDesc').textContent = provider.description;
+    document.getElementById('itemContacts').innerHTML = '';
+
+    document.getElementById('itemCtaBtn').textContent = CAT_CTA[cat] || 'View Details';
+
+    document.getElementById('itemBackdrop').classList.add('open');
+    resetIdle();
+    syncInteractingClass();
+}
+
+document.getElementById('itemClose').addEventListener('click', closeItemPopup);
+document.getElementById('itemBackdrop').addEventListener('click', function(e) {
+    if (e.target === this) closeItemPopup();
+});
+document.getElementById('itemPopupBox').addEventListener('click', e => e.stopPropagation());
+
+document.getElementById('itemCtaBtn').addEventListener('click', openHandoffPopup);
+
+function closeItemPopup() {
+    S.popup = null;
+    document.getElementById('itemBackdrop').classList.remove('open');
+    if (S.screen === 'category') resetIdle(); else clearTimeout(S.idleTimer);
+    syncInteractingClass();
+}
+
+/* ========================================================
+   UPDATE POPUP (Building Updates — no CTA)
+======================================================== */
+function openUpdatePopup(upd) {
+    S.update = upd; S.popup = 'update';
+
+    document.getElementById('updateImage').style.background = upd.bgColor || '#101808';
+    document.getElementById('updateImage').textContent = upd.icon;
+    document.getElementById('updateTitle').textContent = upd.title;
+    document.getElementById('updateSubtitle').textContent = upd.subtitle;
+    document.getElementById('updateBody').textContent = upd.description;
+
+    document.getElementById('updateBackdrop').classList.add('open');
+    resetIdle();
+    syncInteractingClass();
+}
+
+document.getElementById('updateClose').addEventListener('click', closeUpdatePopup);
+document.getElementById('updateBackdrop').addEventListener('click', function(e) {
+    if (e.target === this) closeUpdatePopup();
+});
+document.getElementById('updatePopupBox').addEventListener('click', e => e.stopPropagation());
+
+function closeUpdatePopup() {
+    S.popup = null;
+    document.getElementById('updateBackdrop').classList.remove('open');
+    if (S.screen === 'category') resetIdle(); else clearTimeout(S.idleTimer);
+    syncInteractingClass();
+}
+
+/* ========================================================
+   HANDOFF POPUP — QR + phone UI
+======================================================== */
+function openHandoffPopup() {
+    const p = S.provider, cat = S.category;
+    if (!p) return;
+    S.popup = 'handoff';
+
+    const deepLink = `${CONFIG.HANDOFF_BASE}/${cat}/${p.slug}`;
+    document.getElementById('handoffHeading').textContent = `Scan to View ${p.nameEN}`;
+    document.getElementById('handoffSubheading').textContent = 'Scan the QR code with your phone to continue';
+
+    // QR code via qrserver.com — free, no auth, works in Android WebView
+    document.getElementById('qrImage').src =
+        `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(deepLink)}`;
+    document.getElementById('qrUrl').textContent = deepLink;
+
+    // Unit reference for Rent / Sale categories
+    const unitRef = document.getElementById('handoffUnitRef');
+    if ((cat === 'rent' || cat === 'sale') && p.unitRef) {
+        unitRef.textContent = `🔖 ${p.unitRef}`;
+        unitRef.style.display = 'block';
+    } else {
+        unitRef.style.display = 'none';
+    }
+
+    document.getElementById('phoneInput').value = '';
+    document.getElementById('sendConfirm').textContent = '';
+
+    // Transition: close item popup, open handoff
+    document.getElementById('itemBackdrop').classList.remove('open');
+    document.getElementById('handoffBackdrop').classList.add('open');
+    resetIdle();
+}
+
+document.getElementById('handoffClose').addEventListener('click', closeHandoffPopup);
+document.getElementById('handoffBackdrop').addEventListener('click', function(e) {
+    if (e.target === this) closeHandoffPopup();
+});
+document.getElementById('handoffPopupBox').addEventListener('click', e => e.stopPropagation());
+
+function closeHandoffPopup() {
+    S.popup = null;
+    document.getElementById('handoffBackdrop').classList.remove('open');
+    if (S.screen === 'category') resetIdle(); else clearTimeout(S.idleTimer);
+    syncInteractingClass();
+}
+
+// Send Link — UI only, no actual SMS
+document.getElementById('sendLinkBtn').addEventListener('click', function() {
+    const phone = document.getElementById('phoneInput').value.trim().replace(/\D/g, '');
+    const confirm = document.getElementById('sendConfirm');
+    if (!phone || phone.length < 8) {
+        document.getElementById('phoneInput').focus();
+        confirm.textContent = 'Please enter a valid phone number.';
+        confirm.style.color = '#FF8C69';
+        return;
+    }
+    confirm.textContent = `✅ Link sent to +66 ${phone}`;
+    confirm.style.color = '#4CAF50';
+    document.getElementById('phoneInput').value = '';
+    setTimeout(() => { confirm.textContent = ''; }, 4000);
+});
+
+/* ========================================================
+   CITY GROUPS & WORLD CLOCKS
+======================================================== */
+const CITY_GROUPS = [
+    [{ name:'Singapore', tz:'Asia/Singapore' }, { name:'Hong Kong', tz:'Asia/Hong_Kong' }, { name:'Tokyo', tz:'Asia/Tokyo' }],
+    [{ name:'New York',  tz:'America/New_York' }, { name:'LA', tz:'America/Los_Angeles' }, { name:'London', tz:'Europe/London' }],
+    [{ name:'London',    tz:'Europe/London' }, { name:'Paris', tz:'Europe/Paris' }, { name:'Milan', tz:'Europe/Rome' }]
+];
+let currentGroupIndex = 0;
+
+function updateBangkokTime() {
+    const now = new Date();
+    document.getElementById('localTime').textContent =
+        now.toLocaleTimeString('en-GB', { timeZone:'Asia/Bangkok', hour12:false });
+    document.getElementById('localDate').textContent =
+        now.toLocaleDateString('en-GB', { timeZone:'Asia/Bangkok', weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+
+function updateAnalogClock(idx, tz) {
+    const now = new Date();
+    const ts = now.toLocaleTimeString('en-US', { timeZone:tz, hour12:false });
+    const [h, m, s] = ts.split(':').map(Number);
+    document.getElementById(`hour${idx}`).style.transform   = `rotate(${(h%12)*30 + m*0.5}deg)`;
+    document.getElementById(`minute${idx}`).style.transform = `rotate(${m*6 + s*0.1}deg)`;
+    document.getElementById(`second${idx}`).style.transform = `rotate(${s*6}deg)`;
+    const clk = document.getElementById(`clock${idx}`);
+    const cty = document.getElementById(`city${idx}`);
+    if (h >= 6 && h < 18) {
+        clk.classList.remove('dark-theme'); clk.classList.add('light-theme'); cty.style.color = '#fff';
+    } else {
+        clk.classList.remove('light-theme'); clk.classList.add('dark-theme'); cty.style.color = '#C4682D';
+    }
+}
+
+function updateWorldClocks() {
+    CITY_GROUPS[currentGroupIndex].forEach((c, i) => {
+        document.getElementById(`city${i+1}`).textContent = c.name;
+        updateAnalogClock(i+1, c.tz);
+    });
+}
+
+function rotateClockGroup() {
+    currentGroupIndex = (currentGroupIndex + 1) % CITY_GROUPS.length;
+    updateWorldClocks();
+}
+
+/* ========================================================
+   WEATHER — OpenWeatherMap
+======================================================== */
+async function fetchWeather() {
+    const KEY = 'weather_data', TKEY = 'weather_ts', now = Date.now();
+    const cd = localStorage.getItem(KEY), ct = localStorage.getItem(TKEY);
+    if (cd && ct && (now - +ct) < CONFIG.CACHE_DURATION) {
+        try { updateWeatherUI(JSON.parse(cd)); return; } catch(e) {}
+    }
+    try {
+        const r = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${CONFIG.BANGKOK_LAT}&lon=${CONFIG.BANGKOK_LON}&appid=${CONFIG.WEATHER_API_KEY}&units=metric`);
+        if (!r.ok) throw new Error();
+        const d = await r.json();
+        if (d.main?.temp && d.weather?.[0]) {
+            localStorage.setItem(KEY, JSON.stringify(d)); localStorage.setItem(TKEY, ''+now);
+            updateWeatherUI(d);
+        }
+    } catch(e) {
+        try { updateWeatherUI(JSON.parse(cd)); } catch(e2) { mockWeather(); }
+    }
+}
+
+function weatherIcon(desc) {
+    const d = desc.toLowerCase();
+    const h = parseInt(new Date().toLocaleTimeString('en-US',{timeZone:'Asia/Bangkok',hour12:false,hour:'numeric'}));
+    const night = h >= 18 || h < 6;
+    if (d.includes('clear')) return night ? '🌙' : '☀️';
+    if (d.includes('few')) return night ? '☁️' : '🌤️';
+    if (d.includes('scattered')||d.includes('partly')) return night ? '☁️' : '⛅';
+    if (d.includes('cloud')||d.includes('overcast')) return '☁️';
+    if (d.includes('light rain')) return '🌦️';
+    if (d.includes('rain')||d.includes('drizzle')) return '🌧️';
+    if (d.includes('storm')) return '⛈️';
+    if (d.includes('snow')) return '🌨️';
+    if (d.includes('mist')||d.includes('fog')||d.includes('haze')) return '🌫️';
+    return night ? '🌙' : '⛅';
+}
+function updateWeatherUI(d) {
+    try {
+        document.getElementById('weatherIcon').textContent = weatherIcon(d.weather[0].description);
+        document.getElementById('weatherTemp').textContent = `${Math.round(d.main.temp)}°C`;
+    } catch(e) { mockWeather(); }
+}
+function mockWeather() {
+    const h = parseInt(new Date().toLocaleTimeString('en-US',{timeZone:'Asia/Bangkok',hour12:false,hour:'numeric'}));
+    document.getElementById('weatherIcon').textContent = (h>=18||h<6) ? '🌙' : '⛅';
+    document.getElementById('weatherTemp').textContent = '32°C';
+}
+
+/* ========================================================
+   NEWS — NewsData.io
+======================================================== */
+async function fetchNews() {
+    const KEY = 'news_data', TKEY = 'news_ts', now = Date.now();
+    const cd = localStorage.getItem(KEY), ct = localStorage.getItem(TKEY);
+    if (cd && ct && (now - +ct) < CONFIG.CACHE_DURATION) {
+        try { updateNewsUI(JSON.parse(cd)); return; } catch(e) {}
+    }
+    try {
+        const r = await fetch(`https://newsdata.io/api/1/news?apikey=${CONFIG.NEWS_API_KEY}&country=th&language=th,en`);
+        if (!r.ok) throw new Error();
+        const d = await r.json();
+        if (d.results?.length) {
+            localStorage.setItem(KEY, JSON.stringify(d)); localStorage.setItem(TKEY, ''+now);
+            updateNewsUI(d);
+        }
+    } catch(e) {
+        try { updateNewsUI(JSON.parse(cd)); } catch(e2) { mockNews(); }
+    }
+}
+function updateNewsUI(d) {
+    try {
+        const html = d.results.map(a => {
+            if (!a?.title) return '';
+            return `<span class="news-item">${a.title.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span><span class="news-separator">•</span>`;
+        }).filter(Boolean).join('');
+        document.getElementById('newsTicker').innerHTML = html + html;
+    } catch(e) { mockNews(); }
+}
+function mockNews() {
+    const items = [
+        'Thailand economic growth expected to accelerate in 2026',
+        'ประเทศไทยเตรียมพร้อมต้อนรับนักท่องเที่ยวในช่วงเทศกาล',
+        'Digital transformation continues to reshape Thai businesses',
+        'กรุงเทพฯ ติดอันดับเมืองที่น่าเที่ยวชมที่สุดในโลก',
+        'Thailand leads ASEAN in sustainable tourism initiatives'
+    ];
+    const html = items.map(t => `<span class="news-item">${t}</span><span class="news-separator">•</span>`).join('');
+    document.getElementById('newsTicker').innerHTML = html + html;
+}
+
+/* ========================================================
+   VIDEO PLAYLIST — preload & seamless loop
+======================================================== */
+let playlist = [
+    { url:'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', cta_en:'Explore Our Menu', cta_th:'สำรวจเมนูของเรา' },
+    { url:'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', cta_en:'Discover Properties', cta_th:'ค้นพบอสังหาริมทรัพย์' }
+];
+let currentVideoIndex = 0;
+
+async function loadPlaylist() {
+    // 1) Try Sanity
+    try {
+        const q = `*[_type == "playlistItem"] | order(order asc){
+            "url": coalesce(videoFile.asset->url, url),
+            cta_en, cta_th, category
+        }`;
+        const results = await sanityFetch(q);
+        if (results?.length) {
+            playlist = results;
+            console.log('Playlist loaded from Sanity');
+            return;
+        }
+    } catch(e) { console.warn('Sanity playlist unavailable:', e.message); }
+
+    // 2) Try local playlist.json
+    try {
+        const r = await fetch('playlist.json');
+        const d = await r.json();
+        if (d?.length) playlist = d;
+    } catch(e) { console.warn('playlist.json not found, using defaults'); }
+}
+
+function playVideo() {
+    const main = document.getElementById('mainVideo');
+    const pre  = document.getElementById('preloadVideo');
+
+    function doPlay(idx) {
+        const cur = playlist[idx];
+        main.src = cur.url;
+        main.load();
+        main.addEventListener('canplay', () => main.play().catch(() => {}), { once: true });
+        // Preload next
+        const nxt = (idx + 1) % playlist.length;
+        pre.src = playlist[nxt].url;
+        pre.load();
+    }
+
+    main.addEventListener('ended', () => {
+        currentVideoIndex = (currentVideoIndex + 1) % playlist.length;
+        doPlay(currentVideoIndex);
+    });
+
+    doPlay(currentVideoIndex);
+}
+
+/* ========================================================
+   INIT
+======================================================== */
+async function init() {
+    // Clear stale cache keys from previous sessions
+    ['weather_data','weather_data_time','news_data','news_data_time'].forEach(k => localStorage.removeItem(k));
+
+    await Promise.all([loadPlaylist(), loadCategoryConfig(), loadProviders(), loadBuildingUpdates()]);
+    playVideo();
+
+    // Show mock data immediately; real data overwrites when fetch succeeds
+    mockWeather(); mockNews();
+    fetchWeather(); fetchNews();
+
+    updateBangkokTime();      setInterval(updateBangkokTime, 1000);
+    updateWorldClocks();      setInterval(updateWorldClocks, 1000);
+    setInterval(rotateClockGroup, CONFIG.CITY_ROTATION_INTERVAL);
+    setInterval(fetchWeather, CONFIG.CACHE_DURATION);
+    setInterval(fetchNews,    CONFIG.CACHE_DURATION);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
+</script>
+</body>
+</html>

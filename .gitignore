@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.sanity/
+
+# Seed script — contains write API token, do not commit
+sanity-studio/seed.mjs
+
+# OS
+.DS_Store
+Thumbs.db

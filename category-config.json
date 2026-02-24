@@ -1,0 +1,86 @@
+{
+  "categories": [
+    {
+      "id": "food",
+      "label": { "en": "Food", "th": "อาหาร" },
+      "ctaItem": { "en": "View Menu", "th": "ดูเมนู" },
+      "subcategories": [
+        { "id": "dine_in",     "label": { "en": "Dine-in",     "th": "ทานที่ร้าน" },     "order": 1 },
+        { "id": "delivery",    "label": { "en": "Delivery",    "th": "เดลิเวอรี่" },     "order": 2 },
+        { "id": "recommended", "label": { "en": "Recommended", "th": "แนะนำ" },          "order": 3 },
+        { "id": "thai_cuisine","label": { "en": "Thai Cuisine","th": "อาหารไทย" },        "order": 4 },
+        { "id": "vegan",       "label": { "en": "Vegan",       "th": "วีแกน" },           "order": 5 },
+        { "id": "coffee",      "label": { "en": "Coffee",      "th": "กาแฟ" },            "order": 6 },
+        { "id": "dessert",     "label": { "en": "Dessert",     "th": "ของหวาน" },         "order": 7 },
+        { "id": "promotions",  "label": { "en": "Promotions",  "th": "โปรโมชั่น" },      "order": 8 }
+      ],
+      "fallbackSubcategoryId": "recommended"
+    },
+    {
+      "id": "groceries",
+      "label": { "en": "Groceries", "th": "ของใช้/ของชำ" },
+      "ctaItem": { "en": "View Items", "th": "ดูสินค้า" },
+      "subcategories": [
+        { "id": "fresh_produce", "label": { "en": "Fresh Produce",  "th": "ผักผลไม้" },                   "order": 1 },
+        { "id": "dairy_eggs",    "label": { "en": "Dairy & Eggs",   "th": "นมและไข่" },                   "order": 2 },
+        { "id": "meat_seafood",  "label": { "en": "Meat & Seafood", "th": "เนื้อและซีฟู้ด" },            "order": 3 },
+        { "id": "snack_drinks",  "label": { "en": "Snack & Drinks", "th": "ขนมและเครื่องดื่ม" },         "order": 4 },
+        { "id": "ready_to_eat",  "label": { "en": "Ready-to-Eat",   "th": "อาหารพร้อมทาน" },             "order": 5 },
+        { "id": "household",     "label": { "en": "Household",      "th": "ของใช้ในบ้าน" },              "order": 6 },
+        { "id": "organic",       "label": { "en": "Organic",        "th": "ออร์แกนิก" },                 "order": 7 },
+        { "id": "drug_store",    "label": { "en": "Drug Store",     "th": "ร้านยา/ของดูแลสุขภาพ" },     "order": 8 },
+        { "id": "promotions",    "label": { "en": "Promotions",     "th": "โปรโมชั่น" },                 "order": 9 },
+        { "id": "store_24hr",    "label": { "en": "24-hr Store",    "th": "เปิด 24 ชม." },               "order": 10 }
+      ],
+      "fallbackSubcategoryId": "fresh_produce"
+    },
+    {
+      "id": "services",
+      "label": { "en": "Services", "th": "บริการ" },
+      "ctaItem": { "en": "View Service", "th": "ดูบริการ" },
+      "subcategories": [
+        { "id": "cleaning",             "label": { "en": "Cleaning",              "th": "ทำความสะอาด" },            "order": 1 },
+        { "id": "repair_maintenance",   "label": { "en": "Repair & Maintenance",  "th": "ซ่อมและบำรุงรักษา" },     "order": 2 },
+        { "id": "renovation_interior",  "label": { "en": "Renovation & Interior", "th": "รีโนเวทและตกแต่งภายใน" }, "order": 3 },
+        { "id": "moving_delivery",      "label": { "en": "Moving & Delivery",     "th": "ขนย้ายและส่งของ" },        "order": 4 },
+        { "id": "laundry_dry_clean",    "label": { "en": "Laundry & Dry Clean",   "th": "ซักรีด" },                 "order": 5 },
+        { "id": "pet_services",         "label": { "en": "Pet Services",          "th": "บริการสัตว์เลี้ยง" },      "order": 6 }
+      ],
+      "fallbackSubcategoryId": "cleaning"
+    },
+    {
+      "id": "rent",
+      "label": { "en": "For Rent", "th": "ให้เช่า" },
+      "ctaItem": { "en": "View Listing", "th": "ดูประกาศ" },
+      "subcategories": [
+        { "id": "most_recent", "label": { "en": "Most recent",      "th": "ล่าสุด" },             "order": 1 },
+        { "id": "good_deal",   "label": { "en": "Good deal",        "th": "ราคาดี" },             "order": 2 },
+        { "id": "one_bed",     "label": { "en": "One-Bed",          "th": "1 ห้องนอน" },          "order": 3 },
+        { "id": "two_bed_up",  "label": { "en": "Two-Bed and up",   "th": "2 ห้องนอนขึ้นไป" },   "order": 4 }
+      ],
+      "fallbackSubcategoryId": "most_recent"
+    },
+    {
+      "id": "sale",
+      "label": { "en": "For Sale", "th": "ขาย" },
+      "ctaItem": { "en": "View Listing", "th": "ดูประกาศ" },
+      "subcategories": [
+        { "id": "most_recent", "label": { "en": "Most recent",      "th": "ล่าสุด" },             "order": 1 },
+        { "id": "good_deal",   "label": { "en": "Good deal",        "th": "ราคาดี" },             "order": 2 },
+        { "id": "one_bed",     "label": { "en": "One-Bed",          "th": "1 ห้องนอน" },          "order": 3 },
+        { "id": "two_bed_up",  "label": { "en": "Two-Bed and up",   "th": "2 ห้องนอนขึ้นไป" },   "order": 4 }
+      ],
+      "fallbackSubcategoryId": "most_recent"
+    },
+    {
+      "id": "updates",
+      "label": { "en": "Building Updates", "th": "ประกาศอาคาร" },
+      "ctaItem": { "en": "View more notice", "th": "ดูประกาศเพิ่มเติม" },
+      "subcategories": [
+        { "id": "most_recent", "label": { "en": "Most recent", "th": "ล่าสุด" },    "order": 1 },
+        { "id": "alert",       "label": { "en": "Alert",       "th": "แจ้งเตือน" }, "order": 2 }
+      ],
+      "fallbackSubcategoryId": "most_recent"
+    }
+  ]
+}
