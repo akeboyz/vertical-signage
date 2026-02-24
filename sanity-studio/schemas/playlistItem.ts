@@ -15,71 +15,49 @@ export default defineType({
       options: { filter: 'isActive == true' },
     }),
 
-    // ── Scheduling ───────────────────────────────────────────────────────────
+    // ── Play order ────────────────────────────────────────────────────────────
     defineField({
       name: 'order',
       title: 'Play Order',
       type: 'number',
       validation: Rule => Rule.required().min(1),
     }),
+
+    // ── Slot switch ───────────────────────────────────────────────────────────
+    // enabled here controls the playlist *slot* independently of media.enabled.
+    // Both must be true for the kiosk to show the item.
     defineField({
       name: 'enabled',
       title: 'Enabled',
       type: 'boolean',
       initialValue: true,
-      description: 'Uncheck to temporarily hide this item from the playlist.',
-    }),
-    defineField({
-      name: 'startAt',
-      title: 'Start At',
-      type: 'datetime',
-      description: 'Optional — show this item only from this date/time onward.',
-    }),
-    defineField({
-      name: 'endAt',
-      title: 'End At',
-      type: 'datetime',
-      description: 'Optional — stop showing this item after this date/time.',
-      validation: Rule =>
-        Rule.custom((value, context) => {
-          const { startAt } = context.parent as { startAt?: string }
-          if (value && startAt && value <= startAt) return 'End At must be after Start At'
-          return true
-        }),
+      description: 'Uncheck to hide this slot without deleting it.',
     }),
 
-    // ── Media source (kiosk uses coalesce(videoFile.asset->url, url)) ────────
+    // ── Media reference ───────────────────────────────────────────────────────
+    // CTA text, category, asset URL, schedule, and provider are all on the
+    // referenced media document — not repeated here (single source of truth).
+    // cta_en / cta_th removed: CTA is standardised per category in the kiosk.
+    // startAt / endAt removed: canonical schedule lives on media.startAt/endAt.
+    // Kiosk GROQ: resolve via media->{ ..., "url": coalesce(videoFile.asset->url, imageFile.asset->url, url) }
     defineField({
-      name: 'url',
-      title: 'Video URL (external MP4 or HLS .m3u8)',
-      type: 'url',
-      description: 'Paste an external URL, OR leave blank and upload a file below.',
-    }),
-    defineField({
-      name: 'videoFile',
-      title: 'Video File (upload MP4)',
-      type: 'file',
-      description: 'Uploaded file takes priority over URL if both are set.',
-      options: { accept: 'video/*' },
-    }),
-
-    // ── CTA / routing ────────────────────────────────────────────────────────
-    defineField({ name: 'cta_en', title: 'CTA Text (English)', type: 'string' }),
-    defineField({ name: 'cta_th', title: 'CTA Text (Thai)',    type: 'string' }),
-    defineField({
-      name: 'category',
-      title: 'Category (routing on tap)',
-      type: 'string',
-      description: 'Which category screen opens when the user taps Touch to Explore.',
+      name: 'media',
+      title: 'Media',
+      type: 'reference',
+      to: [{ type: 'media' }],
+      validation: Rule => Rule.required(),
+      description: 'Only enabled media assigned to this playlist\'s project will appear in the picker.',
       options: {
-        list: [
-          { title: 'Food',             value: 'food' },
-          { title: 'Groceries',        value: 'groceries' },
-          { title: 'Services',         value: 'services' },
-          { title: 'For Rent',         value: 'rent' },
-          { title: 'For Sale',         value: 'sale' },
-          { title: 'Building Updates', value: 'building-updates' },
-        ],
+        // Filter media to items that include this playlist item's project
+        // and are marked enabled. Falls back to all media if project not yet set.
+        filter: ({ document }: { document: Record<string, any> }) => {
+          const projectRef = document?.project?._ref
+          if (!projectRef) return { filter: 'enabled == true' }
+          return {
+            filter: '$projectId in projects[]._ref && enabled == true',
+            params: { projectId: projectRef },
+          }
+        },
       },
     }),
   ],
@@ -92,19 +70,18 @@ export default defineType({
 
   preview: {
     select: {
-      cta:         'cta_en',
-      projectCode: 'project.code.current',
-      order:       'order',
-      url:         'url',
-      filename:    'videoFile.asset.originalFilename',
-      enabled:     'enabled',
+      mediaTitle:    'media.title',
+      mediaType:     'media.type',
+      mediaCategory: 'media.category',
+      projectCode:   'project.code.current',
+      order:         'order',
+      enabled:       'enabled',
     },
-    prepare({ cta, projectCode, order, url, filename, enabled }) {
-      const source = filename ?? url ?? '(no source)'
+    prepare({ mediaTitle, mediaType, mediaCategory, projectCode, order, enabled }) {
       const status = enabled === false ? '  ·  DISABLED' : ''
       return {
-        title:    `${order ?? '?'}. ${cta ?? '(no CTA)'}${status}`,
-        subtitle: `[${projectCode ?? '?'}]  ${source}`,
+        title:    `${order ?? '?'}. ${mediaTitle ?? '(no media)'}${status}`,
+        subtitle: `[${projectCode ?? '?'}]  ${mediaType ?? '?'}  ·  ${mediaCategory ?? '—'}`,
       }
     },
   },

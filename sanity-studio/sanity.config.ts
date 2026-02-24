@@ -42,6 +42,15 @@ export default defineConfig({
                           ),
 
                         S.listItem()
+                          .title('Media Library')
+                          .child(
+                            S.documentList()
+                              .title('Media Library')
+                              .filter('_type == "media" && $projectId in projects[]._ref')
+                              .params({ projectId })
+                          ),
+
+                        S.listItem()
                           .title('Playlist')
                           .child(
                             S.documentList()
@@ -77,6 +86,7 @@ export default defineConfig({
             S.divider(),
 
             // ── Global flat views (useful for cross-project browsing) ──────────
+            S.documentTypeListItem('media').title('All Media'),
             S.documentTypeListItem('playlistItem').title('All Playlists'),
             S.documentTypeListItem('provider').title('All Providers'),
             S.documentTypeListItem('buildingUpdate').title('All Building Updates'),
