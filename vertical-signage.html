@@ -93,6 +93,15 @@
         .video-player { width: 100%; height: 100%; object-fit: cover; background: #000; }
         .video-hidden { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
 
+        /* ==================== NOTICE CARD (text-only notice playlist slot) ==================== */
+        .notice-card {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: linear-gradient(160deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            color: #fff; text-align: center; padding: 4vh 3vh; box-sizing: border-box;
+        }
+        .notice-card-icon { font-size: 5vh; margin-bottom: 2vh; }
+        .notice-card-title { font-size: 3vh; font-weight: 700; line-height: 1.35; }
+
         /* ==================== MENU BUTTON (top-left overlay) ==================== */
         .menu-btn {
     position: absolute; top: 2.5vh; left: 2.5vh; z-index: 200;
@@ -419,6 +428,10 @@
             <video class="video-player" id="mainVideo" autoplay muted playsinline></video>
             <video class="video-player video-hidden" id="preloadVideo" preload="auto" muted playsinline></video>
             <img class="video-player video-hidden" id="imageSlide" alt="" draggable="false">
+            <div class="video-player video-hidden notice-card" id="noticeCard">
+                <div class="notice-card-icon">📢</div>
+                <div id="noticeCardTitle" class="notice-card-title"></div>
+            </div>
 
             <!-- ☰ Menu Button (top-left, z:200) -->
             <button class="menu-btn" id="menuBtn">
@@ -555,16 +568,16 @@ const MOCK_PROVIDERS = {
         { slug:'beauty-studio', nameEN:'The Beauty Studio',   nameTH:'เดอะ บิวตี้ สตูดิโอ',  icon:'💇', coverColor:'#2A083A', location:'Floor 4, Zone B', hours:'10:00–20:00', phone:'+66 2 901 2345', line:'@beautystudio', description:'Full-service hair salon — cuts, coloring, treatments, and nail services for all genders.', subCategoryIds:['cleaning','pet_services'] },
         { slug:'smile-dental',  nameEN:'Smile Dental Clinic', nameTH:'สไมล์ เดนทัล คลินิก', icon:'🦷', coverColor:'#082238', location:'Floor 5, Zone C', hours:'09:00–18:00', phone:'+66 2 012 3456', line:'@smiledental',  description:'General dentistry, whitening, orthodontics, and dental implants. Walk-ins welcome.',      subCategoryIds:['repair_maintenance'] },
     ],
-    rent: [
+    forRent: [
         { slug:'unit-a1203', nameEN:'Unit A-1203', nameTH:'ยูนิต A-1203', icon:'🏠', coverColor:'#101C28', location:'Tower A, Floor 12', hours:'By Appointment', phone:'+66 2 111 2222', line:'@mbkrent', description:'2-bed 2-bath corner unit with panoramic city view. 75 sqm. Fully furnished. Available March 2026.', unitRef:'Unit: A-1203', subCategoryIds:['most_recent','two_bed_up'] },
         { slug:'unit-b0805', nameEN:'Unit B-0805', nameTH:'ยูนิต B-0805', icon:'🏡', coverColor:'#102018', location:'Tower B, Floor 8',  hours:'By Appointment', phone:'+66 2 333 4444', line:'@mbkrent', description:'Studio unit with pool access. 38 sqm. Partially furnished. Great for urban professionals.',       unitRef:'Unit: B-0805', subCategoryIds:['most_recent','good_deal','one_bed'] },
         { slug:'unit-c0302', nameEN:'Unit C-0302', nameTH:'ยูนิต C-0302', icon:'🏘️', coverColor:'#180C28', location:'Tower C, Floor 3',  hours:'By Appointment', phone:'+66 2 555 6666', line:'@mbkrent', description:'1-bed 1-bath with balcony. 55 sqm. Near BTS. Pet-friendly building with communal garden.',     unitRef:'Unit: C-0302', subCategoryIds:['one_bed','good_deal'] },
     ],
-    sale: [
+    forSale: [
         { slug:'unit-c2201', nameEN:'Unit C-2201', nameTH:'ยูนิต C-2201', icon:'🏢', coverColor:'#201800', location:'Tower C, Floor 22', hours:'By Appointment', phone:'+66 2 777 8888', line:'@mbksale', description:'Premium 3-bed penthouse. 150 sqm. Panoramic view. Private elevator. Luxury finishes throughout.', unitRef:'Unit: C-2201', subCategoryIds:['two_bed_up','good_deal'] },
         { slug:'unit-d1105', nameEN:'Unit D-1105', nameTH:'ยูนิต D-1105', icon:'🏗️', coverColor:'#001C1C', location:'Tower D, Floor 11', hours:'By Appointment', phone:'+66 2 999 0000', line:'@mbksale', description:'2-bed 2-bath. 90 sqm. East-facing with greenery view. Ready to move in. No agent fees.',         unitRef:'Unit: D-1105', subCategoryIds:['most_recent','two_bed_up','good_deal'] },
     ],
-    'building-updates': [] // uses MOCK_UPDATES
+    buildingUpdates: [] // uses MOCK_UPDATES
 };
 
 const MOCK_UPDATES = [
@@ -575,7 +588,7 @@ const MOCK_UPDATES = [
 
 const CAT_LABELS = {
     food: 'FOOD', groceries: 'GROCERIES', services: 'SERVICES',
-    rent: 'FOR RENT', sale: 'FOR SALE', 'building-updates': 'BUILDING UPDATES'
+    forRent: 'FOR RENT', forSale: 'FOR SALE', buildingUpdates: 'BUILDING UPDATES'
 };
 const CAT_CTA = {
     food: 'View Menu', groceries: 'View Items', services: 'View Service',
@@ -614,17 +627,45 @@ const FALLBACK_CATEGORY_CONFIG = {"categories":[{"id":"food","label":{"en":"Food
 let categoryConfig = FALLBACK_CATEGORY_CONFIG;
 
 async function loadCategoryConfig() {
-    // 1) Try Sanity (singleton document stored with id 'categoryConfig-singleton')
+    // ── helper: normalise a categoryConfig response to kiosk format ────────────
+    // Schema: subcategories is [{id, label{en,th}}], defaultSubcategoryId (string id).
+    // Kiosk rendering expects subcategories as [{id, label:{en,th}, order}].
+    // label.en is used as the display string for filter tabs.
+    function normaliseCategoryConfig(raw) {
+        return {
+            categories: (raw.categories ?? []).map(cat => ({
+                id:      cat.id,
+                label:   cat.label,
+                ctaItem: cat.ctaItem,
+                // support old field names as fallback for baked data built before migration
+                fallbackSubcategoryId: cat.defaultSubcategoryId ?? cat.defaultSubcategory ?? cat.fallbackSubcategoryId,
+                subcategories: (cat.subcategories ?? []).map((s, i) =>
+                    typeof s === 'string'
+                        // legacy string format (pre-migration baked data)
+                        ? { id: s.toLowerCase().replace(/[^a-z0-9]+/g, '-'), label: { en: s, th: s }, order: i + 1 }
+                        // new object format {id, label{en,th}}
+                        : { id: s.id, label: s.label, order: i + 1 }
+                ),
+            })),
+        };
+    }
+
+    // 0) Use baked data if available (generated by build.mjs)
+    if (window.__BAKED__?.categoryConfig?.categories?.length) {
+        categoryConfig = normaliseCategoryConfig(window.__BAKED__.categoryConfig);
+        console.log('Category config loaded from baked data');
+        return;
+    }
+    // 1) Try Sanity — global singleton doc
     try {
-        const q = `*[_type == "categoryConfig" && _id == "categoryConfig-singleton"][0]{
+        const q = `*[_id == "categoryConfig-global"][0]{
             categories[]{
-                id, label, ctaItem, fallbackSubcategoryId,
-                subcategories[]{ id, label, order }
+                id, label, ctaItem, defaultSubcategoryId, subcategories[]{ id, label }
             }
         }`;
         const result = await sanityFetch(q);
         if (result?.categories?.length) {
-            categoryConfig = result;
+            categoryConfig = normaliseCategoryConfig(result);
             console.log('Category config loaded from Sanity');
             return;
         }
@@ -642,21 +683,73 @@ async function loadCategoryConfig() {
 /* Fetch providers from Sanity and merge into MOCK_PROVIDERS by category.
    Mock data remains as fallback for any category that returns nothing. */
 async function loadProviders() {
+    // ── helper: map new schema shape → shape the kiosk rendering code expects ──
+    function normaliseProvider(p) {
+        return {
+            slug:               p.slug,
+            // legacy compat aliases (kiosk rendering still uses these)
+            nameEN:             p.name_en ?? p.name_th ?? '',
+            nameTH:             p.name_th ?? p.name_en ?? '',
+            // new canonical names
+            name_th:            p.name_th ?? '',
+            name_en:            p.name_en ?? '',
+            displayName:        p.displayName ?? 'th',
+            icon:               '',                          // emoji icon removed in new schema
+            logo:               p.logo ?? '',
+            coverImage:         p.coverImage ?? '',
+            thumbnail:          p.thumbnail ?? '',
+            coverColor:         '#1a1a2e',                   // not in new schema; use neutral default
+            location:           p.locationText ?? p.location ?? '',
+            hours:              p.openingHours ?? p.hours ?? '',
+            phone:              p.phone ?? '',
+            line:               p.lineId ?? p.line ?? '',
+            website:            p.website ?? '',
+            description:        p.description_th ?? p.description_en ?? p.description ?? '',
+            description_th:     p.description_th ?? '',
+            description_en:     p.description_en ?? '',
+            // subCategoryIds: union of all offer subCategories for this provider
+            subCategoryIds:     p.offers?.flatMap(o => o.subCategories ?? []) ?? p.subCategoryIds ?? [],
+            unitRef:            p.unitRef ?? '',
+            defaultHandoffType: p.defaultHandoffType ?? 'qr',
+            category:           p.category,
+            offers:             p.offers ?? [],
+        };
+    }
+
+    // 0) Use baked data if available (generated by build.mjs)
+    if (window.__BAKED__?.providers && Object.keys(window.__BAKED__.providers).length) {
+        Object.keys(window.__BAKED__.providers).forEach(cat => {
+            MOCK_PROVIDERS[cat] = window.__BAKED__.providers[cat].map(normaliseProvider);
+        });
+        console.log('Providers loaded from baked data');
+        return;
+    }
+    // 1) Try Sanity — global providers, scoped via their offers
     try {
-        const q = `*[_type == "provider"]{
-            "slug": slug.current,
-            nameEN, nameTH, icon, coverColor,
-            description, category, subCategoryIds,
-            details[]{label, value},
-            media[]{"fileUrl": file.asset->url, title}
+        const code = window.__BAKED__?.projectCode
+                  ?? new URLSearchParams(location.search).get('project')
+                  ?? '';
+        const q = `*[_type == "provider" && status == true]{
+            "slug":          slug.current,
+            name_th, name_en, category, displayName,
+            locationText, phone, lineId, website, openingHours,
+            "logo":          logo.asset->url,
+            "coverImage":    coverImage.asset->url,
+            "thumbnail":     thumbnail.asset->url,
+            description_th, description_en,
+            defaultHandoffType, unitRef,
+            "offers": *[_type == "offer" && provider._ref == ^._id && status == true &&
+                        (scope == "global" || "${code}" in projects[]._ref)]{
+                "slug": slug.current, title_th, category, subCategories,
+                "primaryImage": primaryImage.asset->url, ctaType, ctaURL
+            }
         }`;
         const results = await sanityFetch(q);
         if (!results?.length) return;
-        // Group by category and override the matching MOCK_PROVIDERS bucket
         const grouped = {};
         results.forEach(p => {
             if (!grouped[p.category]) grouped[p.category] = [];
-            grouped[p.category].push(p);
+            grouped[p.category].push(normaliseProvider(p));
         });
         Object.keys(grouped).forEach(cat => { MOCK_PROVIDERS[cat] = grouped[cat]; });
         console.log('Providers loaded from Sanity');
@@ -665,16 +758,47 @@ async function loadProviders() {
 
 /* Fetch building updates from Sanity; replaces MOCK_UPDATES in-place. */
 async function loadBuildingUpdates() {
+    // ── helper: map notice media → shape MOCK_UPDATES rendering code expects ───
+    // Old buildingUpdate schema had: slug, title, subtitle, icon, bgColor, description, subCategoryIds.
+    // New model: media(kind="notice") with content on the linked offer document.
+    function normaliseNotice(n) {
+        return {
+            slug:          n.offer?.slug  ?? n.slug  ?? (n.title ?? '').toLowerCase().replace(/\s+/g, '-'),
+            title:         n.offer?.title_th ?? n.title ?? '',
+            subtitle:      n.offer?.shortDesc_th ?? n.subtitle ?? '',
+            icon:          n.icon  ?? '📢',      // icon no longer in schema; use default
+            bgColor:       n.bgColor ?? '#141A08',
+            description:   n.offer?.description_th ?? n.description ?? '',
+            subCategoryIds: n.offer?.subCategories ?? n.subCategoryIds ?? [],
+            url:           n.url ?? '',
+        };
+    }
+
+    // 0) Use baked data if available (generated by build.mjs)
+    // build.mjs now uses key 'notices'; fall back to legacy 'updates' key for old builds.
+    const bakedNotices = window.__BAKED__?.notices ?? window.__BAKED__?.updates;
+    if (bakedNotices?.length) {
+        MOCK_UPDATES.splice(0, MOCK_UPDATES.length, ...bakedNotices.map(normaliseNotice));
+        console.log('Notices loaded from baked data');
+        return;
+    }
+    // 1) Try Sanity — media(kind="notice") replaces the retired buildingUpdate type
     try {
-        const q = `*[_type == "buildingUpdate"] | order(publishedAt desc){
-            "slug": slug.current,
-            title, subtitle, icon, bgColor, description, subCategoryIds
+        const code = window.__BAKED__?.projectCode
+                  ?? new URLSearchParams(location.search).get('project')
+                  ?? '';
+        const q = `*[_type == "media" && kind == "notice" && isActive == true &&
+                    "${code}" in projects[]._ref
+                   ] | order(_createdAt desc){
+            title,
+            "url": coalesce(videoFile.asset->url, imageFile.asset->url),
+            "offer": offer->{ "slug": slug.current, title_th, subCategories, shortDesc_th, description_th }
         }`;
         const results = await sanityFetch(q);
         if (!results?.length) return;
-        MOCK_UPDATES.splice(0, MOCK_UPDATES.length, ...results);
-        console.log('Building updates loaded from Sanity');
-    } catch(e) { console.warn('Sanity building updates unavailable, using mock data:', e.message); }
+        MOCK_UPDATES.splice(0, MOCK_UPDATES.length, ...results.map(normaliseNotice));
+        console.log('Notices loaded from Sanity');
+    } catch(e) { console.warn('Sanity notices unavailable, using mock data:', e.message); }
 }
 
 /* ========================================================
@@ -918,21 +1042,37 @@ function closeCategoryScreen() {
 ======================================================== */
 document.getElementById('touchToExplore').addEventListener('click', function() {
     const cur = playlist[currentVideoIndex];
-    if (isBuildingUpdates(cur)) {
-        openCategoryScreen('building-updates');
-    } else {
-        // Default: open first food provider as placeholder for current video
-        // (replace with CMS mapping once category field is added to playlist.json)
-        openItemPopup(MOCK_PROVIDERS.food[0], 'food');
-    }
-});
+    if (!cur) return;
 
-function isBuildingUpdates(video) {
-    if (!video) return false;
-    const cta = (video.cta_en || '').toLowerCase();
-    const file = (video.url || '').split('/').pop().toLowerCase();
-    return cta.includes('learn more') || cta.includes('view building') || file.includes('sintel');
-}
+    // 1. Provider slug → open that provider's popup directly.
+    //    Search the slot's category first, then all categories as a fallback.
+    if (cur.providerSlug) {
+        const cat = cur.category || '';
+        const provider = (MOCK_PROVIDERS[cat] || []).find(p => p.slug === cur.providerSlug)
+                      || Object.values(MOCK_PROVIDERS).flat().find(p => p.slug === cur.providerSlug);
+        if (provider) {
+            openItemPopup(provider, cat || 'services');
+            return;
+        }
+    }
+
+    // 2. Category set → open that category screen.
+    //    Sanity uses camelCase (buildingUpdates); panel uses kebab (building-updates).
+    if (cur.category) {
+        const screenCat = cur.category === 'buildingUpdates' ? 'building-updates' : cur.category;
+        openCategoryScreen(screenCat);
+        return;
+    }
+
+    // 3. Notice with no category → building updates screen.
+    if (cur.kind === 'notice') {
+        openCategoryScreen('building-updates');
+        return;
+    }
+
+    // 4. Final fallback.
+    openCategoryScreen('food');
+});
 
 /* ========================================================
    ITEM POPUP
@@ -1215,15 +1355,53 @@ let playlist = [
 let currentVideoIndex = 0;
 
 async function loadPlaylist() {
-    // 1) Try Sanity
+    // 0) Use baked data if available (generated by build.mjs)
+    if (window.__BAKED__?.playlist?.length) {
+        // Normalise new field names → shape kiosk rendering expects:
+        //   displayDuration  → imageDurationOverride (alias; kiosk uses the legacy name)
+        //   category         already coalesced in baked data: coalesce(touchExploreCategory, offer.category)
+        playlist = window.__BAKED__.playlist.map(item => ({
+            ...item,
+            imageDurationOverride: item.displayDuration ?? item.imageDurationOverride,
+        }));
+        console.log('Playlist loaded from baked data');
+        return;
+    }
+    // 1) Try Sanity (live fallback — updated for new schema)
     try {
-        const q = `*[_type == "playlistItem"] | order(order asc){
-            enabled,
-            "mediaType": media->type,
-            "url": coalesce(media->videoFile.asset->url, media->imageFile.asset->url),
-            "category": media->category,
-            "defaultDuration": media->defaultImageDuration,
-            imageDurationOverride
+        const code = window.__BAKED__?.projectCode
+                  ?? new URLSearchParams(location.search).get('project')
+                  ?? '';
+        const q = `*[
+            _type == "playlistItem" &&
+            project->code.current == "${code}" &&
+            enabled == true &&
+            (!defined(startAt) || startAt <= now()) &&
+            (!defined(endAt)   || endAt   >  now()) &&
+            media->isActive == true &&
+            media->kind in ["promo", "notice"] &&
+            (media->kind == "notice" || media->scope == "global" || "${code}" in (media->projects[]->code.current))
+        ] | order(order asc){
+            "kind":               media->kind,
+            "title":              media->title,
+            "mediaType":          select(
+                                    defined(media->type)              => media->type,
+                                    defined(media->videoFile.asset)   => "video",
+                                    defined(media->imageFile.asset)   => "image",
+                                    defined(media->posterImage.asset) => "image"
+                                  ),
+            "url":                coalesce(media->videoFile.asset->url, media->imageFile.asset->url, media->posterImage.asset->url),
+            "category":           coalesce(touchExploreCategory, media->offer->category),
+            "defaultDuration":    media->defaultImageDuration,
+            "imageDurationOverride": displayDuration,
+            "displayDuration":    displayDuration,
+            "offerSlug":          media->offer->slug.current,
+            "providerSlug":       coalesce(
+                                    touchExploreDefaultProvider->slug.current,
+                                    media->offer->provider->slug.current
+                                  ),
+            touchExploreCategory,
+            notes
         }`;
         const results = await sanityFetch(q);
         if (results?.length) {
@@ -1242,9 +1420,10 @@ async function loadPlaylist() {
 }
 
 function playVideo() {
-    const main = document.getElementById('mainVideo');
-    const pre  = document.getElementById('preloadVideo');
-    const img  = document.getElementById('imageSlide');
+    const main   = document.getElementById('mainVideo');
+    const pre    = document.getElementById('preloadVideo');
+    const img    = document.getElementById('imageSlide');
+    const notice = document.getElementById('noticeCard');
     let imageTimer = null;
 
     function advance() {
@@ -1252,39 +1431,52 @@ function playVideo() {
         doPlay(currentVideoIndex);
     }
 
+    // Hide all three media layers in one call before switching slots
+    function hideAll() {
+        main.pause(); main.removeAttribute('src'); main.classList.add('video-hidden');
+        img.classList.add('video-hidden'); img.removeAttribute('src');
+        notice.classList.add('video-hidden');
+    }
+
     function doPlay(idx) {
         const cur = playlist[idx];
         clearTimeout(imageTimer);
 
-        if (cur.mediaType === 'image') {
-            // ── Image slot ───────────────────────────────────────────────────
+        if (cur.kind === 'notice' && !cur.url) {
+            // ── Text-only notice card ─────────────────────────────────────────
+            // No asset URL — render a full-screen notice card for N seconds.
+            const secs = cur.imageDurationOverride ?? cur.defaultDuration ?? 10;
+            hideAll();
+            document.getElementById('noticeCardTitle').textContent = cur.title ?? '';
+            notice.classList.remove('video-hidden');
+            imageTimer = setTimeout(() => { notice.classList.add('video-hidden'); advance(); }, secs * 1000);
+
+        } else if (cur.mediaType === 'image') {
+            // ── Image slot (promo image or notice with image asset) ───────────
             // duration = slot override ?? media default ?? 10 s
             const secs = cur.imageDurationOverride ?? cur.defaultDuration ?? 10;
-            main.pause();
-            main.removeAttribute('src');
-            main.classList.add('video-hidden');
+            hideAll();
             img.src = cur.url || '';
             img.classList.remove('video-hidden');
             imageTimer = setTimeout(advance, secs * 1000);
+
         } else {
-            // ── Video slot ───────────────────────────────────────────────────
-            clearTimeout(imageTimer);
-            img.classList.add('video-hidden');
-            img.removeAttribute('src');
+            // ── Video slot (promo video or notice with video asset) ───────────
+            hideAll();
             main.classList.remove('video-hidden');
             main.src = cur.url;
             main.load();
             main.addEventListener('canplay', () => main.play().catch(() => {}), { once: true });
-            // Preload next video (skip preload for image slots)
+            // Preload next video (skip preload for image/notice-card slots)
             const nxt = (currentVideoIndex + 1) % playlist.length;
-            if (playlist[nxt]?.mediaType !== 'image') {
+            if (playlist[nxt]?.mediaType === 'video') {
                 pre.src = playlist[nxt].url;
                 pre.load();
             }
         }
     }
 
-    // Video natural-end handler (images use their own timer above)
+    // Video natural-end handler (image/notice slots use their own timer above)
     main.addEventListener('ended', advance);
 
     doPlay(currentVideoIndex);
