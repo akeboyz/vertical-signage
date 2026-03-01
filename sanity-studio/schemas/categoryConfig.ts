@@ -1,29 +1,25 @@
 import { defineField, defineType } from 'sanity'
 
-// One categoryConfig document per project.
-// Previously a singleton (fixed _id 'categoryConfig-singleton'); now a
-// normal document keyed by project reference so each project can have its
-// own category/subcategory tree.
-//
-// Kiosk GROQ migration note:
-//   OLD: *[_type == "categoryConfig" && _id == "categoryConfig-singleton"][0]
-//   NEW: *[_type == "categoryConfig" && project._ref == $projectId][0]
+// Global singleton — _id is always "categoryConfig-global".
+// All projects share one category configuration; no project reference needed.
+// Kiosk reads label/ctaItem per category for display; reads subcategories[] for filter tabs.
+// subcategories are plain display strings (e.g. "Dine-in") — order = display order.
+// Category IDs must match enum: food, groceries, services, forRent, forSale, buildingUpdates.
+
+const CATEGORY_ID_LIST = [
+  { title: 'Food',             value: 'food' },
+  { title: 'Groceries',        value: 'groceries' },
+  { title: 'Services',         value: 'services' },
+  { title: 'For Rent',         value: 'forRent' },
+  { title: 'For Sale',         value: 'forSale' },
+  { title: 'Building Updates', value: 'buildingUpdates' },
+]
 
 export default defineType({
   name: 'categoryConfig',
   title: 'Category Config',
   type: 'document',
   fields: [
-    // ── Project scope ──────────────────────────────────────────────────────
-    defineField({
-      name: 'project',
-      title: 'Project',
-      type: 'reference',
-      to: [{ type: 'project' }],
-      validation: Rule => Rule.required(),
-      options: { filter: 'isActive == true' },
-    }),
-
     defineField({
       name: 'categories',
       title: 'Categories',
@@ -32,16 +28,38 @@ export default defineType({
         type: 'object',
         name: 'categoryEntry',
         fields: [
-          defineField({ name: 'id',    title: 'Category ID',  type: 'string', description: 'e.g. food, groceries, rent, updates' }),
-          defineField({ name: 'label', title: 'Label', type: 'object', fields: [
-            defineField({ name: 'en', title: 'English', type: 'string' }),
-            defineField({ name: 'th', title: 'Thai',    type: 'string' }),
-          ]}),
-          defineField({ name: 'ctaItem', title: 'CTA Button Label', type: 'object', fields: [
-            defineField({ name: 'en', title: 'English', type: 'string' }),
-            defineField({ name: 'th', title: 'Thai',    type: 'string' }),
-          ]}),
-          defineField({ name: 'fallbackSubcategoryId', title: 'Fallback Sub-Category ID', type: 'string' }),
+          defineField({
+            name: 'id',
+            title: 'Category ID',
+            type: 'string',
+            options: { list: CATEGORY_ID_LIST },
+            description: 'Must match the category enum used across all schemas.',
+            validation: Rule => Rule.required(),
+          }),
+          defineField({
+            name: 'label',
+            title: 'Category Label',
+            type: 'object',
+            fields: [
+              defineField({ name: 'en', title: 'English', type: 'string' }),
+              defineField({ name: 'th', title: 'Thai',    type: 'string' }),
+            ],
+          }),
+          defineField({
+            name: 'ctaItem',
+            title: 'CTA Button Label',
+            type: 'object',
+            fields: [
+              defineField({ name: 'en', title: 'English', type: 'string' }),
+              defineField({ name: 'th', title: 'Thai',    type: 'string' }),
+            ],
+          }),
+          defineField({
+            name: 'defaultSubcategoryId',
+            title: 'Default Sub-Category ID',
+            type: 'string',
+            description: 'Must match one of the subcategory IDs below. Shown as active tab on load.',
+          }),
           defineField({
             name: 'subcategories',
             title: 'Sub-Categories',
@@ -50,28 +68,37 @@ export default defineType({
               type: 'object',
               name: 'subcategoryEntry',
               fields: [
-                defineField({ name: 'id',    title: 'Sub-Category ID', type: 'string' }),
-                defineField({ name: 'label', title: 'Label', type: 'object', fields: [
-                  defineField({ name: 'en', title: 'English', type: 'string' }),
-                  defineField({ name: 'th', title: 'Thai',    type: 'string' }),
-                ]}),
-                defineField({ name: 'order', title: 'Display Order', type: 'number' }),
+                defineField({
+                  name: 'id',
+                  title: 'ID',
+                  type: 'string',
+                  description: 'Kebab-case, unique within category (e.g. "dine-in").',
+                  validation: Rule => Rule.required(),
+                }),
+                defineField({
+                  name: 'label',
+                  title: 'Label',
+                  type: 'object',
+                  fields: [
+                    defineField({ name: 'en', title: 'English', type: 'string', validation: Rule => Rule.required() }),
+                    defineField({ name: 'th', title: 'Thai',    type: 'string', validation: Rule => Rule.required() }),
+                  ],
+                }),
               ],
               preview: { select: { title: 'label.en', subtitle: 'id' } },
             }],
+            description: 'Filter tabs. Array order = display order.',
           }),
         ],
         preview: { select: { title: 'label.en', subtitle: 'id' } },
       }],
     }),
   ],
+
   preview: {
-    select: { projectTitle: 'project.title', projectCode: 'project.code.current' },
-    prepare({ projectTitle, projectCode }) {
-      return {
-        title:    `Category Config — ${projectTitle ?? '(no project)'}`,
-        subtitle: projectCode ? `code: ${projectCode}` : undefined,
-      }
+    select: { id: '_id' },
+    prepare() {
+      return { title: 'Global Category Config' }
     },
   },
 })

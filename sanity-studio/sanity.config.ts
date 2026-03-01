@@ -2,6 +2,11 @@ import { defineConfig } from 'sanity'
 import { structureTool } from 'sanity/structure'
 import { visionTool } from '@sanity/vision'
 import { schemaTypes } from './schemas'
+import { initPlaylistAction }    from './actions/initPlaylistAction'
+import { ProjectPublishAction } from './actions/projectPublishAction'
+import { AddToPlaylistAction }  from './actions/addToPlaylistAction'
+import { MediaPublishAction }   from './actions/mediaPublishAction'
+import { DocumentOverview }     from './views/DocumentOverview'
 
 const PROJECT_ID = 'awjj9g8u'
 const DATASET    = 'production'
@@ -15,87 +20,70 @@ export default defineConfig({
 
   plugins: [
     structureTool({
+      // Every document opens in read-only Overview by default.
+      // The user clicks the "Edit" tab to make changes.
+      // Exception: the categoryConfig singleton skips Overview and shows the form directly.
+      defaultDocumentNode: (S, { schemaType }) => {
+        if (schemaType === 'categoryConfig') {
+          return S.document().views([S.view.form().id('edit').title('Edit')])
+        }
+        return S.document().views([
+          S.view.component(DocumentOverview).id('overview').title('Overview'),
+          S.view.form().id('edit').title('Edit'),
+        ])
+      },
+
       structure: S =>
         S.list()
           .title('Content')
           .items([
 
-            // ── Projects — plain list; "+" opens the project create form directly ─
+            // ── Projects ──────────────────────────────────────────────────────
+            // "+" opens a blank project form. Clicking an existing project opens it directly.
             S.documentTypeListItem('project').title('Projects'),
 
             S.divider(),
 
-            // ── Browse by Project — per-project content navigation ─────────────
-            // Separate from Projects so clicking "+" above always creates a doc.
+            // ── Playlist (per-project) ─────────────────────────────────────────
+            // Level 1: list of all projects.
+            // Level 2: PlaylistItems filtered to that project, ordered by `order`.
+            // "+" inside a project's playlist pre-fills project via initial value template.
             S.listItem()
-              .title('Browse by Project')
+              .id('playlist')
+              .title('Playlist')
               .child(
                 S.documentTypeList('project')
-                  .title('Select a Project')
+                  .title('Playlist — Select Project')
                   .child(projectId =>
-                    S.list()
-                      .title('Project Content')
-                      .items([
-
-                        S.listItem()
-                          .title('Category Config')
-                          .child(
-                            S.documentList()
-                              .title('Category Config')
-                              .filter('_type == "categoryConfig" && project._ref == $projectId')
-                              .params({ projectId })
-                          ),
-
-                        S.listItem()
-                          .title('Media Library')
-                          .child(
-                            S.documentList()
-                              .title('Media Library')
-                              .filter('_type == "media" && $projectId in projects[]._ref')
-                              .params({ projectId })
-                          ),
-
-                        S.listItem()
-                          .title('Playlist')
-                          .child(
-                            S.documentList()
-                              .title('Playlist')
-                              .filter('_type == "playlistItem" && project._ref == $projectId')
-                              .params({ projectId })
-                              .defaultOrdering([{ field: 'order', direction: 'asc' }])
-                          ),
-
-                        S.listItem()
-                          .title('Providers')
-                          .child(
-                            S.documentList()
-                              .title('Providers')
-                              .filter('_type == "provider" && project._ref == $projectId')
-                              .params({ projectId })
-                          ),
-
-                        S.listItem()
-                          .title('Building Updates')
-                          .child(
-                            S.documentList()
-                              .title('Building Updates')
-                              .filter('_type == "buildingUpdate" && project._ref == $projectId')
-                              .params({ projectId })
-                              .defaultOrdering([{ field: 'publishedAt', direction: 'desc' }])
-                          ),
-
-                      ])
+                    S.documentList()
+                      .title('Playlist Items')
+                      .filter('_type == "playlistItem" && project._ref == $projectId')
+                      .params({ projectId })
+                      .defaultOrdering([{ field: 'order', direction: 'asc' }])
                   )
               ),
 
+            // ── Media Library ──────────────────────────────────────────────────
+            S.documentTypeListItem('media').title('Media Library'),
+
             S.divider(),
 
-            // ── Global flat views (useful for cross-project browsing) ──────────
-            S.documentTypeListItem('media').title('All Media'),
-            S.documentTypeListItem('playlistItem').title('All Playlists'),
-            S.documentTypeListItem('provider').title('All Providers'),
-            S.documentTypeListItem('buildingUpdate').title('All Building Updates'),
-            S.documentTypeListItem('categoryConfig').title('All Category Configs'),
+            // ── Providers + Offers (global) ────────────────────────────────────
+            S.documentTypeListItem('offer').title('Offers'),
+            S.documentTypeListItem('provider').title('Providers'),
+
+            S.divider(),
+
+            // ── Config (global singleton) ──────────────────────────────────────
+            S.listItem()
+              .title('Global Category Config')
+              .id('categoryConfig-global')
+              .child(
+                S.document()
+                  .schemaType('categoryConfig')
+                  .documentId('categoryConfig-global')
+                  .title('Global Category Config')
+              ),
 
           ]),
     }),
@@ -104,4 +92,46 @@ export default defineConfig({
   ],
 
   schema: { types: schemaTypes },
+
+  // ── Initial value templates ───────────────────────────────────────────────
+  // Used by the Playlist list-item in the structure above so that clicking "+"
+  // pre-fills the project reference on the new playlist item.
+  templates: prev => [
+    ...prev,
+    {
+      id:         'playlistItem-by-project',
+      title:      'Playlist Item',
+      schemaType: 'playlistItem',
+      parameters: [{ name: 'projectId', type: 'string', title: 'Project ID' }],
+      value: ({ projectId }: { projectId: string }) => ({
+        project: { _type: 'reference', _ref: projectId },
+        order:   1,
+        enabled: true,
+      }),
+    },
+  ],
+
+  // ── Document actions ──────────────────────────────────────────────────────
+  document: {
+    actions: (prev, ctx) => {
+      if (ctx.schemaType === 'project') {
+        // Replace the first action (always Publish) with our version that
+        // auto-creates a playlist item on first publish.
+        // Keep initPlaylistAction as a manual fallback button.
+        const [_defaultPublish, ...rest] = prev
+        return [ProjectPublishAction, ...rest, initPlaylistAction]
+      }
+      if (ctx.schemaType === 'media') {
+        // Replace default Publish with MediaPublishAction (handles addToPlaylistOnPublish).
+        // Keep AddToPlaylistAction as a manual fallback in the ••• menu.
+        const [_defaultPublish, ...rest] = prev
+        return [MediaPublishAction, ...rest, AddToPlaylistAction]
+      }
+      if (ctx.schemaType === 'categoryConfig') {
+        // Singleton — block delete and duplicate so it can't be destroyed or duplicated.
+        return prev.filter(a => !['delete', 'duplicate'].includes((a as any).action))
+      }
+      return prev
+    },
+  },
 })

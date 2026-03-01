@@ -1,15 +1,15 @@
 import project       from './project'
-import media         from './media'
-import provider       from './provider'
-import buildingUpdate from './buildingUpdate'
-import playlistItem   from './playlistItem'
 import categoryConfig from './categoryConfig'
+import provider       from './provider'
+import offer          from './offer'
+import media          from './media'
+import playlistItem   from './playlistItem'
 
 export const schemaTypes = [
   project,
-  media,
-  provider,
-  buildingUpdate,
-  playlistItem,
   categoryConfig,
+  provider,
+  offer,
+  media,
+  playlistItem,
 ]

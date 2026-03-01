@@ -1,11 +1,21 @@
 import { defineField, defineType } from 'sanity'
 
+// Must stay in sync with offer.ts, media.ts, provider.ts, and categoryConfig IDs.
+const CATEGORY_LIST = [
+  { title: 'Food',             value: 'food' },
+  { title: 'Groceries',        value: 'groceries' },
+  { title: 'Services',         value: 'services' },
+  { title: 'For Rent',         value: 'forRent' },
+  { title: 'For Sale',         value: 'forSale' },
+  { title: 'Building Updates', value: 'buildingUpdates' },
+]
+
 export default defineType({
   name: 'playlistItem',
   title: 'Playlist Item',
   type: 'document',
   fields: [
-    // ── Project scope ────────────────────────────────────────────────────────
+    // ── Project scope ─────────────────────────────────────────────────────────
     defineField({
       name: 'project',
       title: 'Project',
@@ -24,8 +34,6 @@ export default defineType({
     }),
 
     // ── Slot switch ───────────────────────────────────────────────────────────
-    // enabled here controls the playlist *slot* independently of media.enabled.
-    // Both must be true for the kiosk to show the item.
     defineField({
       name: 'enabled',
       title: 'Enabled',
@@ -35,41 +43,88 @@ export default defineType({
     }),
 
     // ── Media reference ───────────────────────────────────────────────────────
-    // CTA text, category, asset URL, schedule, and provider are all on the
-    // referenced media document — not repeated here (single source of truth).
-    // cta_en / cta_th removed: CTA is standardised per category in the kiosk.
-    // startAt / endAt removed: canonical schedule lives on media.startAt/endAt.
-    // Kiosk GROQ: resolve via media->{ ..., "url": coalesce(videoFile.asset->url, imageFile.asset->url, url) }
+    // The SAME media document may appear on multiple slots (one PlaylistItem per slot).
+    // Only promo media scoped to this project is shown in the picker.
     defineField({
       name: 'media',
       title: 'Media',
       type: 'reference',
       to: [{ type: 'media' }],
       validation: Rule => Rule.required(),
-      description: 'Only enabled media assigned to this playlist\'s project will appear in the picker.',
+      description: 'Only enabled promo media scoped to this project appears in the picker.',
       options: {
-        // Filter media to items that include this playlist item's project
-        // and are marked enabled. Falls back to all media if project not yet set.
         filter: ({ document }: { document: Record<string, any> }) => {
           const projectRef = document?.project?._ref
-          if (!projectRef) return { filter: 'enabled == true' }
+          if (!projectRef) return { filter: 'enabled == true && kind == "promo"' }
           return {
-            filter: '$projectId in projects[]._ref && enabled == true',
+            filter:
+              'isActive == true && kind == "promo" && (scope == "global" || $projectId in projects[]._ref)',
             params: { projectId: projectRef },
           }
         },
       },
     }),
 
-    // ── Image duration override ───────────────────────────────────────────────
-    // Kiosk resolution: imageDurationOverride ?? media->defaultImageDuration ?? 10
-    // Leave blank to use the media document's default. Ignored for video slots.
+    // ── Slot schedule (independent of Media schedule) ─────────────────────────
+    // A slot is visible only when BOTH schedules pass AND both enabled flags are true:
+    //   playlistItem.enabled && playlistItem schedule passes
+    //   && media.enabled && media schedule passes
     defineField({
-      name: 'imageDurationOverride',
-      title: 'Image Duration Override (seconds)',
+      name: 'startAt',
+      title: 'Slot Start At',
+      type: 'datetime',
+      description: 'Optional — activate this slot from this date/time onward.',
+    }),
+    defineField({
+      name: 'endAt',
+      title: 'Slot End At',
+      type: 'datetime',
+      description: 'Optional — deactivate this slot after this date/time.',
+      validation: Rule =>
+        Rule.custom((value, context) => {
+          const { startAt } = context.parent as { startAt?: string }
+          if (value && startAt && value <= startAt) return 'Slot End At must be after Slot Start At'
+          return true
+        }),
+    }),
+
+    // ── Display duration (image slots only) ───────────────────────────────────
+    // Resolution: playlistItem.displayDuration ?? media.defaultImageDuration ?? 10
+    // Ignored for video slots (videos use their intrinsic duration).
+    defineField({
+      name: 'displayDuration',
+      title: 'Display Duration (seconds)',
       type: 'number',
-      description: 'Overrides the media default for this slot only. Leave blank to inherit.',
+      description: 'Image slots only. Overrides the media default for this slot. Leave blank to inherit.',
       validation: Rule => Rule.min(1).max(300),
+    }),
+
+    // ── Touch-to-Explore routing ──────────────────────────────────────────────
+    // touchExploreCategory overrides media.category for kiosk navigation.
+    // If blank, kiosk falls back to media.category.
+    defineField({
+      name: 'touchExploreCategory',
+      title: 'Touch to Explore — Category',
+      type: 'string',
+      options: { list: CATEGORY_LIST },
+      description: 'Overrides media.category for kiosk routing. Leave blank to use media.category.',
+    }),
+
+    // If set, kiosk navigates to this provider's page on tap (shows all their offers).
+    defineField({
+      name: 'touchExploreDefaultProvider',
+      title: 'Touch to Explore — Default Provider',
+      type: 'reference',
+      to: [{ type: 'provider' }],
+      description: 'Optional. Kiosk navigates directly to this provider on tap instead of showing the category list.',
+    }),
+
+    // ── Internal notes ────────────────────────────────────────────────────────
+    defineField({
+      name: 'notes',
+      title: 'Notes (internal)',
+      type: 'string',
+      description: 'Not shown in kiosk. For editorial reference only.',
     }),
   ],
 
@@ -83,16 +138,17 @@ export default defineType({
     select: {
       mediaTitle:    'media.title',
       mediaType:     'media.type',
-      mediaCategory: 'media.category',
       projectCode:   'project.code.current',
       order:         'order',
       enabled:       'enabled',
+      touchCategory: 'touchExploreCategory',
     },
-    prepare({ mediaTitle, mediaType, mediaCategory, projectCode, order, enabled }) {
-      const status = enabled === false ? '  ·  DISABLED' : ''
+    prepare({ mediaTitle, mediaType, projectCode, order, enabled, touchCategory }) {
+      const status   = enabled === false ? '  ·  DISABLED' : ''
+      const category = touchCategory ?? '—'
       return {
         title:    `${order ?? '?'}. ${mediaTitle ?? '(no media)'}${status}`,
-        subtitle: `[${projectCode ?? '?'}]  ${mediaType ?? '?'}  ·  ${mediaCategory ?? '—'}`,
+        subtitle: `[${projectCode ?? '?'}]  ${mediaType ?? '?'}  ·  ${category}`,
       }
     },
   },
