@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Premium Vertical Digital Signage</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -519,6 +522,8 @@
             <div class="news-ticker" id="newsTicker">
                 <span class="news-item">Loading news...</span>
             </div>
+            <!-- Build stamp: low-opacity; confirms which build Yodeck is serving -->
+            <span id="buildStamp" style="position:absolute;right:0.8vh;bottom:0.5vh;font-size:0.9vh;color:rgba(255,255,255,0.25);white-space:nowrap;pointer-events:none;"></span>
         </div>
 
     </div>
@@ -543,8 +548,8 @@ const CONFIG = {
     SANITY_PROJECT_ID: 'awjj9g8u',   // e.g. 'ab12cd34'
     SANITY_DATASET:    'production',
     SANITY_API_VER:    '2024-01-01',
-    // Read-only API token (Settings → API → Tokens in sanity.io/manage)
-    SANITY_TOKEN:      'skOqU4MijlSvuIgOEFJpYJmL9komvn0FqXxGVpVTnjWqQUwwGSwTilLkHcys2gqe36f7UpFwBP7lAnbYo3Ti5FOzdgDDKaqfoNi62BLklEmThXJAplBy1ZCkPKHsdLFC8sD8HXSnNVs8Kw5RgRoqoose6WKe5ZqtqMG6BQBCcnrzpcdkX2yL',
+    // Read-only API token — injected by build.mjs into deployed copies; empty in template.
+    SANITY_TOKEN:      '',
     // ─────────────────────────────────────────────────────────────────────────
 };
 
@@ -1466,7 +1471,18 @@ function playVideo() {
             main.classList.remove('video-hidden');
             main.src = cur.url;
             main.load();
-            main.addEventListener('canplay', () => main.play().catch(() => {}), { once: true });
+            // Prevent stuck state: advance if canplay never fires (blocked / CORS / codec / autoplay denied)
+            let safeAdvanced = false;
+            function safeAdvance() { if (!safeAdvanced) { safeAdvanced = true; advance(); } }
+            const videoSafetyTimer = setTimeout(safeAdvance, 15000);
+            main.addEventListener('canplay', () => {
+                clearTimeout(videoSafetyTimer);
+                main.play().catch(safeAdvance);
+            }, { once: true });
+            main.addEventListener('error', () => {
+                clearTimeout(videoSafetyTimer);
+                safeAdvance();
+            }, { once: true });
             // Preload next video (skip preload for image/notice-card slots)
             const nxt = (currentVideoIndex + 1) % playlist.length;
             if (playlist[nxt]?.mediaType === 'video') {
@@ -1486,6 +1502,13 @@ function playVideo() {
    INIT
 ======================================================== */
 async function init() {
+    // Show build timestamp in bottom-right corner (helps verify which build Yodeck is serving)
+    const stamp = document.getElementById('buildStamp');
+    if (stamp && window.__BAKED__?.builtAt) {
+        const d = new Date(window.__BAKED__.builtAt);
+        stamp.textContent = `build ${d.toISOString().slice(0,16).replace('T',' ')}`;
+    }
+
     // Clear stale cache keys from previous sessions
     ['weather_data','weather_data_time','news_data','news_data_time'].forEach(k => localStorage.removeItem(k));
 

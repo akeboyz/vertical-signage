@@ -228,11 +228,17 @@ for (const project of projects) {
     categoryConfig: globalCategoryConfig ?? null,
   }
 
-  // Inject baked data as an inline <script> just before </head>
-  const injectedHtml = templateHtml.replace(
-    '</head>',
-    `<script>/* baked by build.mjs — ${baked.builtAt} */\nwindow.__BAKED__ = ${JSON.stringify(baked)};\n</script>\n</head>`
-  )
+  // Inject baked data as an inline <script> just before </head>.
+  // Also inject the real Sanity token (which is intentionally left blank in the template).
+  const injectedHtml = templateHtml
+    .replace(
+      "SANITY_TOKEN:      '',",
+      `SANITY_TOKEN:      '${SANITY_TOKEN}',`
+    )
+    .replace(
+      '</head>',
+      `<script>/* baked by build.mjs — ${baked.builtAt} */\nwindow.__BAKED__ = ${JSON.stringify(baked)};\n</script>\n</head>`
+    )
 
   // Write deploy/{code}/
   const outDir = join(__dirname, 'deploy', code)
