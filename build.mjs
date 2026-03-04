@@ -246,7 +246,14 @@ for (const project of projects) {
   writeFileSync(join(outDir, 'index.html'), injectedHtml, 'utf8')
   writeFileSync(
     join(outDir, 'netlify.toml'),
-    `[build]\n  publish = "."\n\n[[redirects]]\n  from = "/*"\n  to   = "/index.html"\n  status = 200\n`,
+    // Cache-Control headers for index.html: force Yodeck / CDN to never serve a stale copy.
+    // The SPA redirect rule catches all paths and serves index.html.
+    `[build]\n  publish = "."\n\n` +
+    `[[headers]]\n  for = "/index.html"\n  [headers.values]\n` +
+    `    Cache-Control = "no-cache, no-store, must-revalidate"\n` +
+    `    Pragma        = "no-cache"\n` +
+    `    Expires       = "0"\n\n` +
+    `[[redirects]]\n  from = "/*"\n  to   = "/index.html"\n  status = 200\n`,
     'utf8'
   )
 
