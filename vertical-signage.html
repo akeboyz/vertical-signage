@@ -558,42 +558,18 @@ const CONFIG = {
 const _ds = {};
 
 /* ========================================================
-   MOCK DATA — Providers per category (placeholder until CMS)
+   PROVIDER + NOTICE STORE — populated entirely from window.__BAKED__
+   All categories start empty. build.mjs bakes the real data in;
+   loadProviders() / loadBuildingUpdates() fill these at runtime.
+   Demo stubs removed: if baked data is absent the categories show
+   empty rather than leaking fake placeholder content on a live screen.
 ======================================================== */
 const MOCK_PROVIDERS = {
-    food: [
-        { slug:'the-pizza-company', nameEN:'The Pizza Company', nameTH:'เดอะ พิซซ่า คอมพานี', icon:'🍕', coverColor:'#5C1010', location:'Floor 2, Zone A', hours:'10:00–22:00', phone:'+66 2 123 4567', line:'@pizzacompany', description:'Premium Italian-style pizza with fresh ingredients. Dine-in, takeaway & delivery available every day.', subCategoryIds:['dine_in','delivery','promotions'] },
-        { slug:'fuji-restaurant',  nameEN:'Fuji Restaurant',    nameTH:'ร้านอาหารฟูจิ',        icon:'🍱', coverColor:'#0E2A46', location:'Floor 1, Zone C', hours:'11:00–21:30', phone:'+66 2 234 5678', line:'@fujirest',     description:'Authentic Japanese cuisine — sushi, ramen, and teppanyaki cooked fresh to order.',              subCategoryIds:['dine_in','recommended'] },
-        { slug:'pepper-lunch',     nameEN:'Pepper Lunch',        nameTH:'เปปเปอร์ ลันช์',       icon:'🥩', coverColor:'#3A1800', location:'Floor 3, Zone B', hours:'10:30–21:00', phone:'+66 2 345 6789', line:'@pepperlunch',  description:'Sizzling hot-plate meals — beef, salmon, and chicken served on a 260°C iron plate.',             subCategoryIds:['dine_in','promotions'] },
-        { slug:'ootoya',           nameEN:'Ootoya',              nameTH:'โอโตยะ',               icon:'🍜', coverColor:'#0E3018', location:'Floor 2, Zone D', hours:'11:00–22:00', phone:'+66 2 456 7890', line:'@ootoya',       description:'Healthy home-style Japanese set meals with freshly prepared sides and miso soup.',               subCategoryIds:['dine_in','recommended'] },
-    ],
-    groceries: [
-        { slug:'tops-market',    nameEN:'Tops Market',    nameTH:'ท็อปส์ มาร์เก็ต',   icon:'🛒', coverColor:'#003818', location:'Floor B1',         hours:'08:00–22:00', phone:'+66 2 567 8901', line:'@topsmarket',  description:'Full-range supermarket with fresh produce, international brands, and a bakery section.',   subCategoryIds:['fresh_produce','snack_drinks','household'] },
-        { slug:'villa-market',   nameEN:'Villa Market',   nameTH:'วิลล่า มาร์เก็ต',   icon:'🥗', coverColor:'#2A2800', location:'Floor B1, Zone A', hours:'07:00–22:30', phone:'+66 2 678 9012', line:'@villamarket', description:'Premium grocery store with imported goods, organic produce, and a gourmet deli counter.', subCategoryIds:['fresh_produce','dairy_eggs','organic'] },
-        { slug:'gourmet-market', nameEN:'Gourmet Market', nameTH:'กูร์เมต์ มาร์เก็ต', icon:'🧀', coverColor:'#3A1200', location:'Floor B2',         hours:'08:00–22:00', phone:'+66 2 789 0123', line:'@gourmetmkt',  description:'Upscale grocery with fine cheeses, charcuterie, premium wines, and specialty imports.',    subCategoryIds:['dairy_eggs','organic','snack_drinks'] },
-    ],
-    services: [
-        { slug:'true-move',     nameEN:'True Move H',         nameTH:'ทรู มูฟ เอช',          icon:'📱', coverColor:'#001A3A', location:'Floor 1, Zone A', hours:'10:00–21:00', phone:'+66 2 890 1234', line:'@truemoveh',    description:'Mobile plans, broadband, and device upgrades. Exclusive in-store promotions available.', subCategoryIds:['repair_maintenance'] },
-        { slug:'beauty-studio', nameEN:'The Beauty Studio',   nameTH:'เดอะ บิวตี้ สตูดิโอ',  icon:'💇', coverColor:'#2A083A', location:'Floor 4, Zone B', hours:'10:00–20:00', phone:'+66 2 901 2345', line:'@beautystudio', description:'Full-service hair salon — cuts, coloring, treatments, and nail services for all genders.', subCategoryIds:['cleaning','pet_services'] },
-        { slug:'smile-dental',  nameEN:'Smile Dental Clinic', nameTH:'สไมล์ เดนทัล คลินิก', icon:'🦷', coverColor:'#082238', location:'Floor 5, Zone C', hours:'09:00–18:00', phone:'+66 2 012 3456', line:'@smiledental',  description:'General dentistry, whitening, orthodontics, and dental implants. Walk-ins welcome.',      subCategoryIds:['repair_maintenance'] },
-    ],
-    forRent: [
-        { slug:'unit-a1203', nameEN:'Unit A-1203', nameTH:'ยูนิต A-1203', icon:'🏠', coverColor:'#101C28', location:'Tower A, Floor 12', hours:'By Appointment', phone:'+66 2 111 2222', line:'@mbkrent', description:'2-bed 2-bath corner unit with panoramic city view. 75 sqm. Fully furnished. Available March 2026.', unitRef:'Unit: A-1203', subCategoryIds:['most_recent','two_bed_up'] },
-        { slug:'unit-b0805', nameEN:'Unit B-0805', nameTH:'ยูนิต B-0805', icon:'🏡', coverColor:'#102018', location:'Tower B, Floor 8',  hours:'By Appointment', phone:'+66 2 333 4444', line:'@mbkrent', description:'Studio unit with pool access. 38 sqm. Partially furnished. Great for urban professionals.',       unitRef:'Unit: B-0805', subCategoryIds:['most_recent','good_deal','one_bed'] },
-        { slug:'unit-c0302', nameEN:'Unit C-0302', nameTH:'ยูนิต C-0302', icon:'🏘️', coverColor:'#180C28', location:'Tower C, Floor 3',  hours:'By Appointment', phone:'+66 2 555 6666', line:'@mbkrent', description:'1-bed 1-bath with balcony. 55 sqm. Near BTS. Pet-friendly building with communal garden.',     unitRef:'Unit: C-0302', subCategoryIds:['one_bed','good_deal'] },
-    ],
-    forSale: [
-        { slug:'unit-c2201', nameEN:'Unit C-2201', nameTH:'ยูนิต C-2201', icon:'🏢', coverColor:'#201800', location:'Tower C, Floor 22', hours:'By Appointment', phone:'+66 2 777 8888', line:'@mbksale', description:'Premium 3-bed penthouse. 150 sqm. Panoramic view. Private elevator. Luxury finishes throughout.', unitRef:'Unit: C-2201', subCategoryIds:['two_bed_up','good_deal'] },
-        { slug:'unit-d1105', nameEN:'Unit D-1105', nameTH:'ยูนิต D-1105', icon:'🏗️', coverColor:'#001C1C', location:'Tower D, Floor 11', hours:'By Appointment', phone:'+66 2 999 0000', line:'@mbksale', description:'2-bed 2-bath. 90 sqm. East-facing with greenery view. Ready to move in. No agent fees.',         unitRef:'Unit: D-1105', subCategoryIds:['most_recent','two_bed_up','good_deal'] },
-    ],
-    buildingUpdates: [] // uses MOCK_UPDATES
+    food: [], groceries: [], services: [],
+    forRent: [], forSale: [], buildingUpdates: []
 };
 
-const MOCK_UPDATES = [
-    { slug:'renovation-floor3',  title:'Floor 3 Renovation',  subtitle:'Closure: 1–15 Mar 2026', icon:'🔨', bgColor:'#141A08', description:'Zone C on Floor 3 will be closed for renovation works. Alternative access is available via the Zone B staircase and west service elevator. We apologize for any inconvenience.', subCategoryIds:['alert','most_recent'] },
-    { slug:'new-tenant-opening', title:'New Tenant Opening',   subtitle:'Opening: 1 Mar 2026',    icon:'🎉', bgColor:'#081430', description:'We are pleased to welcome "Botanica Café" to Floor 2, Zone A. Grand opening with complimentary coffee for the first 100 guests on 1 March 2026.',                          subCategoryIds:['most_recent'] },
-    { slug:'parking-notice',     title:'Parking B2 Closure',  subtitle:'15–20 Mar 2026',          icon:'🚗', bgColor:'#201000', description:'Basement B2 Section D will be closed for electrical upgrades. Additional parking is available at the rooftop level during this period.',                                    subCategoryIds:['alert','most_recent'] },
-];
+const MOCK_UPDATES = [];
 
 const CAT_LABELS = {
     food: 'FOOD', groceries: 'GROCERIES', services: 'SERVICES',
@@ -1529,21 +1505,15 @@ async function init() {
     setInterval(fetchWeather, CONFIG.CACHE_DURATION);
     setInterval(fetchNews,    CONFIG.CACHE_DURATION);
 
-    // ── Hourly self-reload (Yodeck Android cache buster) ──────────────────────
-    // Yodeck's Android player pre-downloads and stores content locally.
-    // HTTP headers and meta cache tags don't affect that store.
-    // Solution: every hour the page reloads itself with a new URL (?_r=<bucket>),
-    // which the player treats as a completely fresh resource and re-fetches from Netlify.
-    // The hourly bucket (_r = Math.floor(Date.now()/3600000)) changes each hour so:
-    //   - same bucket within an hour → no reload loop
-    //   - new bucket after an hour   → fresh URL → fresh fetch → latest build
+    // ── Hourly hard-reload (Yodeck Android cache buster) ─────────────────────
+    // Yodeck's Android WebView may cache pages aggressively.
+    // location.reload() triggers a conditional GET (Cache-Control: max-age=0)
+    // so Netlify's no-cache response forces a fully fresh HTML download.
+    // Fires once per hour; safe in Yodeck because it reloads the same URL
+    // rather than navigating away (navigation can be blocked by the player).
     (function scheduleHourlyReload() {
         var msToNextHour = 3600000 - (Date.now() % 3600000);
-        setTimeout(function() {
-            var url = new URL(location.href);
-            url.searchParams.set('_r', Math.floor(Date.now() / 3600000));
-            location.replace(url.toString());
-        }, msToNextHour);
+        setTimeout(function() { location.reload(); }, msToNextHour);
     })();
 
     // ── Build stamp: shows build time + data sources ─────────────────────────
@@ -1560,6 +1530,18 @@ async function init() {
             `pv:${_ds.providers ?? '?'}`,
         ].join(' ');
         stamp.textContent = `${proj} · ${builtAt} · ${sources}`;
+    }
+
+    // ── Missing-baked-data warning (always visible, no ?debug needed) ────────
+    // If window.__BAKED__ is absent the page loaded the raw template instead of
+    // a built deploy. Providers will be empty. Show a red banner immediately.
+    if (!window.__BAKED__) {
+        var warn = document.createElement('div');
+        warn.style.cssText =
+            'position:fixed;bottom:8vh;left:0;right:0;background:#c0392b;color:#fff;' +
+            'font-family:monospace;font-size:1.6vh;text-align:center;padding:1vh;z-index:99998;';
+        warn.textContent = 'NO BAKED DATA — template served without build.mjs. Providers empty.';
+        document.body.appendChild(warn);
     }
 
     // ── Debug overlay: shown only when URL contains ?debug=1 ─────────────────
