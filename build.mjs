@@ -244,6 +244,15 @@ for (const project of projects) {
   const outDir = join(__dirname, 'deploy', code)
   mkdirSync(outDir, { recursive: true })
   writeFileSync(join(outDir, 'index.html'), injectedHtml, 'utf8')
+
+  // _headers: Netlify reads this from the publish directory unconditionally.
+  // More reliable than netlify.toml when the site uses a repo subdirectory as publish dir.
+  writeFileSync(
+    join(outDir, '_headers'),
+    `/index.html\n  Cache-Control: no-cache, no-store, must-revalidate\n  Pragma: no-cache\n  Expires: 0\n`,
+    'utf8'
+  )
+
   writeFileSync(
     join(outDir, 'netlify.toml'),
     // Cache-Control headers for index.html: force Yodeck / CDN to never serve a stale copy.

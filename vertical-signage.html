@@ -1529,6 +1529,23 @@ async function init() {
     setInterval(fetchWeather, CONFIG.CACHE_DURATION);
     setInterval(fetchNews,    CONFIG.CACHE_DURATION);
 
+    // ── Hourly self-reload (Yodeck Android cache buster) ──────────────────────
+    // Yodeck's Android player pre-downloads and stores content locally.
+    // HTTP headers and meta cache tags don't affect that store.
+    // Solution: every hour the page reloads itself with a new URL (?_r=<bucket>),
+    // which the player treats as a completely fresh resource and re-fetches from Netlify.
+    // The hourly bucket (_r = Math.floor(Date.now()/3600000)) changes each hour so:
+    //   - same bucket within an hour → no reload loop
+    //   - new bucket after an hour   → fresh URL → fresh fetch → latest build
+    (function scheduleHourlyReload() {
+        var msToNextHour = 3600000 - (Date.now() % 3600000);
+        setTimeout(function() {
+            var url = new URL(location.href);
+            url.searchParams.set('_r', Math.floor(Date.now() / 3600000));
+            location.replace(url.toString());
+        }, msToNextHour);
+    })();
+
     // ── Build stamp: shows build time + data sources ─────────────────────────
     // Visible in bottom-right corner. Helps confirm which build Yodeck is serving.
     // Example: "noble-geo · 2026-03-03 08:12 · pl:baked pv:baked"
