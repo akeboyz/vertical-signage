@@ -239,13 +239,73 @@
         .popup-close:active { background: rgba(196,104,45,0.55); }
 
         /* ==================== ITEM POPUP ==================== */
-        .item-popup-cover {
-            width: 100%; height: 17vh; border-radius: 2vh;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 7vh; margin-top: 0.5vh; flex-shrink: 0;
+        /* Square popup — 1:1 aspect ratio; gallery fills remaining flex space */
+        #itemPopupBox {
+            aspect-ratio: 1 / 1;
+            max-height: none;
+            overflow: hidden;
+            padding: 2.5vh 2.5vh 2vh;
         }
-        .item-popup-name-en { font-size: 2.4vh; font-weight: 700; color: #fff; line-height: 1.2; }
-        .item-popup-name-th { font-size: 1.7vh; color: rgba(255,255,255,0.6); line-height: 1.3; }
+        .item-popup-gallery {
+            width: 100%; flex: 1; height: auto; border-radius: 1.5vh;
+            overflow: hidden; position: relative;
+            margin-top: 0; background: #0a1830;
+        }
+        .item-popup-gallery-track {
+            display: flex; height: 100%;
+            overflow-x: scroll; -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: none; scroll-snap-type: x mandatory;
+        }
+        .item-popup-gallery-track::-webkit-scrollbar { display: none; }
+        .item-popup-gallery-track img {
+            flex-shrink: 0; width: 100%; height: 100%;
+            object-fit: cover; scroll-snap-align: start; display: block;
+        }
+        .item-popup-gallery-ph {
+            flex-shrink: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #0a1830, #0f2545); font-size: 7vh;
+        }
+        .item-popup-gallery-dots {
+            position: absolute; bottom: 1vh; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 0.6vh; align-items: center;
+        }
+        .item-popup-gallery-dot {
+            width: 0.8vh; height: 0.8vh; border-radius: 50%;
+            background: rgba(255,255,255,0.35);
+        }
+        .item-popup-gallery-dot.active { background: #fff; }
+        /* Overlays inside gallery */
+        .item-popup-gallery-top-grad {
+            position: absolute; top: 0; left: 0; right: 0; height: 55%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.68) 0%, transparent 100%);
+            pointer-events: none;
+        }
+        .item-popup-gallery-grad {
+            position: absolute; bottom: 0; left: 0; right: 0; height: 75%;
+            background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+            pointer-events: none;
+        }
+        /* Short description — top of gallery */
+        .item-popup-description {
+            position: absolute; top: 1.4vh; left: 1.8vh; right: 1.8vh;
+            font-size: 5.48vh; font-weight: 700;
+            color: rgba(255,255,255,0.95); line-height: 1.45;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        /* Provider name — bottom of gallery (provider popup only); pushed above CTA */
+        .item-popup-gallery-title {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 1.2vh 1.8vh 8vh;
+        }
+        .item-popup-name-en { font-size: 2.4vh; font-weight: 700; color: #fff; line-height: 1.2; text-shadow: 0 2px 8px rgba(0,0,0,0.9); }
+        .item-popup-name-th { font-size: 1.7vh; color: rgba(255,255,255,0.75); line-height: 1.3; text-shadow: 0 1px 4px rgba(0,0,0,0.9); }
+        /* CTA button — bottom of gallery */
+        #itemCtaBtn {
+            position: absolute; bottom: 1.5vh; left: 1.8vh; right: 1.8vh; width: auto;
+            padding: 1.4vh 2vh; font-size: 1.85vh;
+        }
         .item-popup-meta { display: flex; gap: 1.2vh; flex-wrap: wrap; }
         .meta-tag {
             background: rgba(255,255,255,0.08); border-radius: 3vh;
@@ -284,7 +344,9 @@
 
         /* ==================== HANDOFF POPUP ==================== */
         .handoff-heading { font-size: 2vh; font-weight: 700; color: #fff; text-align: center; margin-top: 0.5vh; }
+        .handoff-heading-en { font-size: 1.55vh; font-weight: 500; color: rgba(255,255,255,0.65); text-align: center; margin-top: 0.3vh; }
         .handoff-subheading { font-size: 1.45vh; color: rgba(255,255,255,0.55); text-align: center; }
+        .handoff-subheading-en { font-size: 1.25vh; color: rgba(255,255,255,0.38); text-align: center; margin-top: 0.2vh; }
         .qr-wrap {
             background: #fff; border-radius: 1.8vh; padding: 1.5vh;
             display: flex; align-items: center; justify-content: center; align-self: center;
@@ -316,7 +378,19 @@
         .phone-input::placeholder { color: rgba(255,255,255,0.28); }
         .phone-input:focus { border-color: rgba(196,104,45,0.65); }
         .sms-note { font-size: 1.35vh; color: rgba(255,255,255,0.42); text-align: center; }
-        .send-confirm { font-size: 1.55vh; color: #4CAF50; text-align: center; min-height: 2vh; }
+        .send-confirm-panel {
+            background: rgba(255,255,255,0.06); border: 0.15vh solid rgba(255,255,255,0.15);
+            border-radius: 1.5vh; padding: 1.8vh 1.5vh 1.4vh;
+            flex-direction: column; gap: 1.2vh; align-items: center; text-align: center;
+        }
+        .send-confirm-msg { font-size: 1.5vh; color: rgba(255,255,255,0.85); line-height: 1.65; }
+        .send-confirm-ok-btn {
+            background: rgba(196,104,45,0.18); border: 0.15vh solid rgba(196,104,45,0.45);
+            color: #C4682D; border-radius: 2vh; padding: 0.9vh 3vh;
+            font-size: 1.5vh; font-weight: 700; font-family: 'Montserrat', sans-serif;
+            cursor: pointer; touch-action: manipulation;
+        }
+        .send-confirm-ok-btn:active { background: rgba(196,104,45,0.45); }
 
         /* ==================== BOTTOM BAR ==================== */
         .bottom-bar {
@@ -324,13 +398,13 @@
             display: flex; align-items: center; overflow: hidden;
             position: relative; height: 7vh; box-sizing: border-box;
         }
-        .news-ticker { display: flex; white-space: nowrap; animation: scroll-left 479s linear infinite; }
+        .news-ticker { display: flex; white-space: nowrap; animation: scroll-left 60s linear infinite; }
         .news-item { font-size: 2.2vh; padding: 0 5vh; color: #fff; }
         .news-separator { color: #C4682D; margin: 0 2vh; }
 
         @keyframes scroll-left {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
         }
 
         /* ==================== RESPONSIVE ==================== */
@@ -362,6 +436,113 @@
 
         @media (prefers-reduced-motion: reduce) {
             .menu-btn, .category-panel, .touch-to-explore { animation: none !important; }
+        }
+
+        /* ==================== LANG TOGGLE BUTTON ==================== */
+        .lang-toggle-btn {
+            margin-left: auto; flex-shrink: 0;
+            background: rgba(196,104,45,0.18); border: 0.2vh solid rgba(196,104,45,0.45);
+            color: #C4682D; border-radius: 1.5vh; padding: 0.6vh 1.8vh;
+            font-size: 1.55vh; font-weight: 700; font-family: 'Montserrat', sans-serif;
+            cursor: pointer; touch-action: manipulation; transition: background 0.12s;
+        }
+        .lang-toggle-btn:active { background: rgba(196,104,45,0.45); }
+
+        /* ==================== OFFER LOOP CONTAINER ==================== */
+        .provider-grid.offer-mode {
+            padding: 0; overflow: hidden;
+        }
+        /* Scrollable container for circular looped scroll.
+           overflow-y:scroll keeps a stable scroll target on Android WebView.
+           overscroll-behavior:none prevents pull-to-refresh interfering. */
+        .offer-loop-container {
+            flex: 1; min-height: 0;
+            overflow-y: scroll;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: none;
+        }
+        .offer-loop-container::-webkit-scrollbar { width: 0; }
+
+        /* ==================== OFFER SECTION ==================== */
+        .offer-subcat-section { padding: 0 0 1.5vh; }
+        .offer-subcat-label {
+            font-size: 1.55vh; font-weight: 700;
+            color: rgba(255,255,255,0.88); letter-spacing: 0.04vh;
+            padding: 1.4vh 2vh 0.8vh;
+            border-bottom: 0.1vh solid rgba(255,255,255,0.08);
+            margin-bottom: 1vh;
+        }
+
+        /* ==================== OFFER CAROUSEL ==================== */
+        /* Horizontal snap-scroll carousel per subcategory.
+           Shows ~2.5 cards (21vh each) to signal scrollability.
+           Infinite loop: A+B+C triple list, same jump-back technique as vertical loop. */
+        .offer-carousel-track {
+            display: flex; flex-direction: row; gap: 1.4vh;
+            overflow-x: scroll; -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: none;
+            scroll-snap-type: x mandatory; scroll-padding-left: 2vh;
+            padding: 0.8vh 0 1.2vh 2vh;
+            position: relative;
+        }
+        .offer-carousel-track::-webkit-scrollbar { display: none; }
+        .offer-carousel-track .offer-card {
+            flex-shrink: 0; width: 21vh; scroll-snap-align: start;
+        }
+        /* ≤ 2 cards: left-aligned flush with the same left gutter, no scroll */
+        .offer-carousel-track.carousel-static {
+            overflow-x: hidden;
+        }
+
+        /* ==================== OFFER CARD ==================== */
+        .offer-card {
+            background: rgba(255,255,255,0.07);
+            border: 0.15vh solid rgba(255,255,255,0.12);
+            border-radius: 2vh; overflow: hidden; cursor: pointer;
+            display: flex; flex-direction: column;
+            touch-action: manipulation;
+            transition: background 0.12s, border-color 0.12s;
+        }
+        .offer-card:active { background: rgba(196,104,45,0.2); border-color: rgba(196,104,45,0.6); }
+        .offer-card-img-wrap {
+            position: relative; width: 100%; flex-shrink: 0;
+        }
+        .offer-card-img {
+            width: 100%; height: 12vh; object-fit: cover;
+            display: block; background: #0a1830;
+        }
+        .offer-card-img-ph {
+            width: 100%; height: 12vh; background: linear-gradient(135deg, #0a1830, #0f2545);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 3.5vh;
+        }
+        /* Provider logo — top-left overlay */
+        .offer-card-logo-overlay {
+            position: absolute; top: 0.7vh; left: 0.7vh;
+            width: 3vh; height: 3vh; border-radius: 0.6vh;
+            object-fit: cover; display: block;
+            border: 0.15vh solid rgba(255,255,255,0.35);
+            box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,0.5);
+        }
+        /* Provider name — bottom-right overlay */
+        .offer-card-provider-name {
+            position: absolute; bottom: 0.7vh; right: 0.7vh;
+            font-size: 1.05vh; font-weight: 600; color: #fff;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            max-width: 12vh;
+            background: rgba(0,0,0,0.50); border-radius: 1.5vh;
+            padding: 0.3vh 0.65vh;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+            backdrop-filter: blur(2px);
+        }
+        .offer-card-body { padding: 1vh 1.2vh 1.2vh; display: flex; flex-direction: column; gap: 0.35vh; }
+        .offer-card-title {
+            font-size: 1.45vh; font-weight: 700; color: #fff; line-height: 1.25;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .offer-card-desc {
+            font-size: 1.1vh; color: rgba(255,255,255,0.5); line-height: 1.35;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
         }
 
         /* ==================== IDLE COUNTDOWN BADGE ==================== */
@@ -447,8 +628,8 @@
                 <div class="category-panel-item" data-cat="food"><span class="cat-icon">🍽️</span>Food</div>
                 <div class="category-panel-item" data-cat="groceries"><span class="cat-icon">🛒</span>Groceries</div>
                 <div class="category-panel-item" data-cat="services"><span class="cat-icon">🔧</span>Services</div>
-                <div class="category-panel-item" data-cat="rent"><span class="cat-icon">🏠</span>For Rent</div>
-                <div class="category-panel-item" data-cat="sale"><span class="cat-icon">🏷️</span>For Sale</div>
+                <div class="category-panel-item" data-cat="forRent"><span class="cat-icon">🏠</span>For Rent</div>
+                <div class="category-panel-item" data-cat="forSale"><span class="cat-icon">🏷️</span>For Sale</div>
                 <div class="category-panel-item" data-cat="building-updates"><span class="cat-icon">📢</span>Building Updates</div>
             </div>
 
@@ -461,6 +642,7 @@
                 <div class="category-screen-header">
                     <button class="back-btn" id="backBtn">&#8592;</button>
                     <div class="category-screen-title" id="categoryScreenTitle">FOOD</div>
+                    <button class="lang-toggle-btn" id="langToggleBtn">EN</button>
                 </div>
                 <div class="provider-grid" id="providerGrid"></div>
             </div>
@@ -469,13 +651,20 @@
             <div class="popup-backdrop" id="itemBackdrop">
                 <div class="popup-box" id="itemPopupBox">
                     <button class="popup-close" id="itemClose">✕</button>
-                    <div class="item-popup-cover" id="itemCover"></div>
-                    <div class="item-popup-name-en" id="itemNameEN"></div>
-                    <div class="item-popup-name-th" id="itemNameTH"></div>
+                    <div class="item-popup-gallery" id="itemGallery">
+                        <div class="item-popup-gallery-track" id="itemGalleryTrack"></div>
+                        <div class="item-popup-gallery-dots" id="itemGalleryDots" style="display:none;"></div>
+                        <div class="item-popup-gallery-top-grad"></div>
+                        <div class="item-popup-description" id="itemDesc"></div>
+                        <div class="item-popup-gallery-grad"></div>
+                        <div class="item-popup-gallery-title">
+                            <div class="item-popup-name-th" id="itemNameTH"></div>
+                            <div class="item-popup-name-en" id="itemNameEN"></div>
+                        </div>
+                        <button class="popup-cta-btn" id="itemCtaBtn"></button>
+                    </div>
                     <div class="item-popup-meta" id="itemMeta"></div>
-                    <div class="item-popup-description" id="itemDesc"></div>
                     <div class="item-popup-contacts" id="itemContacts"></div>
-                    <button class="popup-cta-btn" id="itemCtaBtn"></button>
                 </div>
             </div>
 
@@ -495,20 +684,25 @@
             <div class="popup-backdrop" id="handoffBackdrop">
                 <div class="popup-box" id="handoffPopupBox">
                     <button class="popup-close" id="handoffClose">✕</button>
-                    <div class="handoff-heading" id="handoffHeading">Scan to Continue</div>
-                    <div class="handoff-subheading" id="handoffSubheading">Scan the QR code with your phone</div>
+                    <div class="handoff-heading" id="handoffHeading"></div>
+                    <div class="handoff-heading-en" id="handoffHeadingEn"></div>
+                    <div class="handoff-subheading" id="handoffSubheading"></div>
+                    <div class="handoff-subheading-en" id="handoffSubheadingEn"></div>
                     <div class="qr-wrap"><img id="qrImage" src="" alt="QR Code" width="180" height="180"></div>
                     <div class="qr-url" id="qrUrl"></div>
                     <div class="handoff-unit-ref" id="handoffUnitRef" style="display:none;"></div>
                     <div class="or-divider">or</div>
-                    <div class="phone-label">Send a link to your phone</div>
+                    <div class="phone-label">กรอกเบอร์โทรเพื่อให้ติดต่อกลับ</div>
+                    <div class="handoff-subheading-en" style="margin-bottom:0.6vh;">Enter your phone number to be contacted</div>
                     <div class="phone-row">
                         <div class="phone-prefix">+66</div>
                         <input class="phone-input" id="phoneInput" type="tel" inputmode="numeric" maxlength="10" placeholder="8X XXX XXXX">
                     </div>
-                    <div class="sms-note">We will send you a link to this listing via SMS</div>
-                    <div class="send-confirm" id="sendConfirm"></div>
                     <button class="popup-cta-btn" id="sendLinkBtn">Send Link</button>
+                    <div class="send-confirm-panel" id="sendConfirmPanel" style="display:none;">
+                        <div class="send-confirm-msg" id="sendConfirmMsg"></div>
+                        <button class="send-confirm-ok-btn" id="sendConfirmOk">OK</button>
+                    </div>
                 </div>
             </div>
 
@@ -522,8 +716,6 @@
             <div class="news-ticker" id="newsTicker">
                 <span class="news-item">Loading news...</span>
             </div>
-            <!-- Build stamp: low-opacity; confirms which build Yodeck is serving -->
-            <span id="buildStamp" style="position:absolute;right:0.8vh;bottom:0.4vh;font-size:1.05vh;color:rgba(255,255,255,0.5);white-space:nowrap;pointer-events:none;font-family:monospace;"></span>
         </div>
 
     </div>
@@ -541,7 +733,7 @@ const CONFIG = {
     CACHE_DURATION: 3600000,        // 1 hour
     CITY_ROTATION_INTERVAL: 8000,   // 8 seconds
     IDLE_TIMEOUT: 60000,            // 60 seconds — applied to Category, Item, Handoff states
-    HANDOFF_BASE: 'https://aquamax.co/m',
+    HANDOFF_BASE: 'https://aquamx.biz/m',
 
     // ── Sanity CMS ────────────────────────────────────────────────────────────
     // Fill these in after running `npm create sanity@latest` in sanity-studio/
@@ -583,6 +775,9 @@ const CAT_CTA = {
 // Maps panel cat IDs → category-config.json category IDs where they differ
 const CAT_ID_MAP = { 'building-updates': 'updates' };
 
+// UI language: 'th' (default) or 'en'. Persisted in sessionStorage.
+let uiLang = sessionStorage.getItem('kiosk_lang') || 'th';
+
 /* ========================================================
    SANITY FETCH — shared GROQ query helper
    Falls back gracefully: if project ID is not set or
@@ -607,7 +802,7 @@ async function sanityFetch(query) {
    CATEGORY CONFIG — fetched from category-config.json
    Falls back to embedded constant if fetch fails.
 ======================================================== */
-const FALLBACK_CATEGORY_CONFIG = {"categories":[{"id":"food","label":{"en":"Food","th":"อาหาร"},"ctaItem":{"en":"View Menu","th":"ดูเมนู"},"subcategories":[{"id":"dine_in","label":{"en":"Dine-in","th":"ทานที่ร้าน"},"order":1},{"id":"delivery","label":{"en":"Delivery","th":"เดลิเวอรี่"},"order":2},{"id":"recommended","label":{"en":"Recommended","th":"แนะนำ"},"order":3},{"id":"thai_cuisine","label":{"en":"Thai Cuisine","th":"อาหารไทย"},"order":4},{"id":"vegan","label":{"en":"Vegan","th":"วีแกน"},"order":5},{"id":"coffee","label":{"en":"Coffee","th":"กาแฟ"},"order":6},{"id":"dessert","label":{"en":"Dessert","th":"ของหวาน"},"order":7},{"id":"promotions","label":{"en":"Promotions","th":"โปรโมชั่น"},"order":8}],"fallbackSubcategoryId":"recommended"},{"id":"groceries","label":{"en":"Groceries","th":"ของใช้/ของชำ"},"ctaItem":{"en":"View Items","th":"ดูสินค้า"},"subcategories":[{"id":"fresh_produce","label":{"en":"Fresh Produce","th":"ผักผลไม้"},"order":1},{"id":"dairy_eggs","label":{"en":"Dairy & Eggs","th":"นมและไข่"},"order":2},{"id":"meat_seafood","label":{"en":"Meat & Seafood","th":"เนื้อและซีฟู้ด"},"order":3},{"id":"snack_drinks","label":{"en":"Snack & Drinks","th":"ขนมและเครื่องดื่ม"},"order":4},{"id":"ready_to_eat","label":{"en":"Ready-to-Eat","th":"อาหารพร้อมทาน"},"order":5},{"id":"household","label":{"en":"Household","th":"ของใช้ในบ้าน"},"order":6},{"id":"organic","label":{"en":"Organic","th":"ออร์แกนิก"},"order":7},{"id":"drug_store","label":{"en":"Drug Store","th":"ร้านยา/ของดูแลสุขภาพ"},"order":8},{"id":"promotions","label":{"en":"Promotions","th":"โปรโมชั่น"},"order":9},{"id":"store_24hr","label":{"en":"24-hr Store","th":"เปิด 24 ชม."},"order":10}],"fallbackSubcategoryId":"fresh_produce"},{"id":"services","label":{"en":"Services","th":"บริการ"},"ctaItem":{"en":"View Service","th":"ดูบริการ"},"subcategories":[{"id":"cleaning","label":{"en":"Cleaning","th":"ทำความสะอาด"},"order":1},{"id":"repair_maintenance","label":{"en":"Repair & Maintenance","th":"ซ่อมและบำรุงรักษา"},"order":2},{"id":"renovation_interior","label":{"en":"Renovation & Interior","th":"รีโนเวทและตกแต่งภายใน"},"order":3},{"id":"moving_delivery","label":{"en":"Moving & Delivery","th":"ขนย้ายและส่งของ"},"order":4},{"id":"laundry_dry_clean","label":{"en":"Laundry & Dry Clean","th":"ซักรีด"},"order":5},{"id":"pet_services","label":{"en":"Pet Services","th":"บริการสัตว์เลี้ยง"},"order":6}],"fallbackSubcategoryId":"cleaning"},{"id":"rent","label":{"en":"For Rent","th":"ให้เช่า"},"ctaItem":{"en":"View Listing","th":"ดูประกาศ"},"subcategories":[{"id":"most_recent","label":{"en":"Most recent","th":"ล่าสุด"},"order":1},{"id":"good_deal","label":{"en":"Good deal","th":"ราคาดี"},"order":2},{"id":"one_bed","label":{"en":"One-Bed","th":"1 ห้องนอน"},"order":3},{"id":"two_bed_up","label":{"en":"Two-Bed and up","th":"2 ห้องนอนขึ้นไป"},"order":4}],"fallbackSubcategoryId":"most_recent"},{"id":"sale","label":{"en":"For Sale","th":"ขาย"},"ctaItem":{"en":"View Listing","th":"ดูประกาศ"},"subcategories":[{"id":"most_recent","label":{"en":"Most recent","th":"ล่าสุด"},"order":1},{"id":"good_deal","label":{"en":"Good deal","th":"ราคาดี"},"order":2},{"id":"one_bed","label":{"en":"One-Bed","th":"1 ห้องนอน"},"order":3},{"id":"two_bed_up","label":{"en":"Two-Bed and up","th":"2 ห้องนอนขึ้นไป"},"order":4}],"fallbackSubcategoryId":"most_recent"},{"id":"updates","label":{"en":"Building Updates","th":"ประกาศอาคาร"},"ctaItem":{"en":"View more notice","th":"ดูประกาศเพิ่มเติม"},"subcategories":[{"id":"most_recent","label":{"en":"Most recent","th":"ล่าสุด"},"order":1},{"id":"alert","label":{"en":"Alert","th":"แจ้งเตือน"},"order":2}],"fallbackSubcategoryId":"most_recent"}]};
+const FALLBACK_CATEGORY_CONFIG = {"categories":[{"id":"food","label":{"en":"Food","th":"อาหาร"},"ctaItem":{"en":"View Menu","th":"ดูเมนู"},"subcategories":[{"id":"dine_in","label":{"en":"Dine-in","th":"ทานที่ร้าน"},"order":1},{"id":"delivery","label":{"en":"Delivery","th":"เดลิเวอรี่"},"order":2},{"id":"recommended","label":{"en":"Recommended","th":"แนะนำ"},"order":3},{"id":"thai_cuisine","label":{"en":"Thai Cuisine","th":"อาหารไทย"},"order":4},{"id":"vegan","label":{"en":"Vegan","th":"วีแกน"},"order":5},{"id":"coffee","label":{"en":"Coffee","th":"กาแฟ"},"order":6},{"id":"dessert","label":{"en":"Dessert","th":"ของหวาน"},"order":7},{"id":"promotions","label":{"en":"Promotions","th":"โปรโมชั่น"},"order":8}],"fallbackSubcategoryId":"recommended"},{"id":"groceries","label":{"en":"Groceries","th":"ของใช้/ของชำ"},"ctaItem":{"en":"View Items","th":"ดูสินค้า"},"subcategories":[{"id":"fresh_produce","label":{"en":"Fresh Produce","th":"ผักผลไม้"},"order":1},{"id":"dairy_eggs","label":{"en":"Dairy & Eggs","th":"นมและไข่"},"order":2},{"id":"meat_seafood","label":{"en":"Meat & Seafood","th":"เนื้อและซีฟู้ด"},"order":3},{"id":"snack_drinks","label":{"en":"Snack & Drinks","th":"ขนมและเครื่องดื่ม"},"order":4},{"id":"ready_to_eat","label":{"en":"Ready-to-Eat","th":"อาหารพร้อมทาน"},"order":5},{"id":"household","label":{"en":"Household","th":"ของใช้ในบ้าน"},"order":6},{"id":"organic","label":{"en":"Organic","th":"ออร์แกนิก"},"order":7},{"id":"drug_store","label":{"en":"Drug Store","th":"ร้านยา/ของดูแลสุขภาพ"},"order":8},{"id":"promotions","label":{"en":"Promotions","th":"โปรโมชั่น"},"order":9},{"id":"store_24hr","label":{"en":"24-hr Store","th":"เปิด 24 ชม."},"order":10}],"fallbackSubcategoryId":"fresh_produce"},{"id":"services","label":{"en":"Services","th":"บริการ"},"ctaItem":{"en":"View Service","th":"ดูบริการ"},"subcategories":[{"id":"cleaning","label":{"en":"Cleaning","th":"ทำความสะอาด"},"order":1},{"id":"repair_maintenance","label":{"en":"Repair & Maintenance","th":"ซ่อมและบำรุงรักษา"},"order":2},{"id":"renovation_interior","label":{"en":"Renovation & Interior","th":"รีโนเวทและตกแต่งภายใน"},"order":3},{"id":"moving_delivery","label":{"en":"Moving & Delivery","th":"ขนย้ายและส่งของ"},"order":4},{"id":"laundry_dry_clean","label":{"en":"Laundry & Dry Clean","th":"ซักรีด"},"order":5},{"id":"pet_services","label":{"en":"Pet Services","th":"บริการสัตว์เลี้ยง"},"order":6},{"id":"beauty","label":{"en":"Beauty","th":"บิวตี้"},"order":7}],"fallbackSubcategoryId":"cleaning"},{"id":"rent","label":{"en":"For Rent","th":"ให้เช่า"},"ctaItem":{"en":"View Listing","th":"ดูประกาศ"},"subcategories":[{"id":"most_recent","label":{"en":"Most recent","th":"ล่าสุด"},"order":1},{"id":"good_deal","label":{"en":"Good deal","th":"ราคาดี"},"order":2},{"id":"one_bed","label":{"en":"One-Bed","th":"1 ห้องนอน"},"order":3},{"id":"two_bed_up","label":{"en":"Two-Bed and up","th":"2 ห้องนอนขึ้นไป"},"order":4}],"fallbackSubcategoryId":"most_recent"},{"id":"sale","label":{"en":"For Sale","th":"ขาย"},"ctaItem":{"en":"View Listing","th":"ดูประกาศ"},"subcategories":[{"id":"most_recent","label":{"en":"Most recent","th":"ล่าสุด"},"order":1},{"id":"good_deal","label":{"en":"Good deal","th":"ราคาดี"},"order":2},{"id":"one_bed","label":{"en":"One-Bed","th":"1 ห้องนอน"},"order":3},{"id":"two_bed_up","label":{"en":"Two-Bed and up","th":"2 ห้องนอนขึ้นไป"},"order":4}],"fallbackSubcategoryId":"most_recent"},{"id":"updates","label":{"en":"Building Updates","th":"ประกาศอาคาร"},"ctaItem":{"en":"View more notice","th":"ดูประกาศเพิ่มเติม"},"subcategories":[{"id":"most_recent","label":{"en":"Most recent","th":"ล่าสุด"},"order":1},{"id":"alert","label":{"en":"Alert","th":"แจ้งเตือน"},"order":2}],"fallbackSubcategoryId":"most_recent"}]};
 
 let categoryConfig = FALLBACK_CATEGORY_CONFIG;
 
@@ -730,7 +925,9 @@ async function loadProviders() {
             "offers": *[_type == "offer" && provider._ref == ^._id && status == true &&
                         (scope == "global" || "${code}" in projects[]._ref)]{
                 "slug": slug.current, title_th, category, subCategories,
-                "primaryImage": primaryImage.asset->url, ctaType, ctaURL
+                "primaryImage": primaryImage.asset->url,
+                "images": images[].asset->url,
+                ctaType, ctaURL
             }
         }`;
         const results = await sanityFetch(q);
@@ -799,6 +996,7 @@ const S = {
     popup: null,           // null | 'item' | 'update' | 'handoff'
     category: null,
     provider: null,
+    offerSlug: null,       // slug of current offer → used to build OLP deep-link in handoff QR
     update: null,
     idleTimer: null,
     countdownInterval: null,
@@ -850,7 +1048,7 @@ function returnToMain() {
     // Silently close everything and return to attract loop
     // Video continues from current index — NOT restarted
     S.panelOpen = false; S.popup = null; S.screen = 'main';
-    S.category = null; S.provider = null; S.update = null;
+    S.category = null; S.provider = null; S.offerSlug = null; S.update = null;
 
     document.getElementById('categoryPanel').classList.remove('open');
     document.getElementById('categoryScreen').classList.remove('open');
@@ -927,74 +1125,26 @@ function openCategoryScreen(cat) {
     S.screen = 'category';
     S.category = cat;
 
-    // Resolve config entry (panel uses 'building-updates', config uses 'updates')
     const configId = CAT_ID_MAP[cat] || cat;
     const catConfig = categoryConfig.categories.find(c => c.id === configId);
     const isUpdates = (cat === 'building-updates' || cat === 'updates');
 
-    // Title from config if available, else fallback map
-    document.getElementById('categoryScreenTitle').textContent =
-        catConfig ? catConfig.label.en.toUpperCase() : (CAT_LABELS[cat] || cat.toUpperCase());
+    // Title — bilingual
+    document.getElementById('categoryScreenTitle').textContent = catConfig
+        ? (uiLang === 'th'
+            ? (catConfig.label?.th || catConfig.label?.en || cat).toUpperCase()
+            : (catConfig.label?.en || cat).toUpperCase())
+        : (CAT_LABELS[cat] || cat.toUpperCase());
 
-    // Build sectioned provider list
-    const grid = document.getElementById('providerGrid');
-    grid.innerHTML = '';
+    // Lang toggle button label: shows the language you CAN switch to
+    const langBtn = document.getElementById('langToggleBtn');
+    langBtn.textContent = uiLang === 'th' ? 'EN' : 'TH';
 
-    const allItems = isUpdates ? MOCK_UPDATES : (MOCK_PROVIDERS[cat] || []);
-
-    if (catConfig && catConfig.subcategories.length > 0) {
-        const sortedSubs = [...catConfig.subcategories].sort((a, b) => a.order - b.order);
-        const fallbackId = catConfig.fallbackSubcategoryId;
-
-        // Items with no matching subcategory go into the fallback section
-        const orphans = allItems.filter(item => {
-            const ids = item.subCategoryIds || [];
-            return ids.length === 0 || !sortedSubs.some(s => ids.includes(s.id));
-        });
-
-        sortedSubs.forEach(subcat => {
-            const matched = allItems.filter(item => (item.subCategoryIds || []).includes(subcat.id));
-            const extras  = subcat.id === fallbackId ? orphans : [];
-            const sectionItems = matched.concat(extras.filter(o => !matched.includes(o)));
-            if (sectionItems.length === 0) return; // skip empty sections
-
-            const section = document.createElement('div');
-            section.className = 'subcat-section';
-
-            const header = document.createElement('div');
-            header.className = 'subcat-header';
-            header.innerHTML = `<span class="subcat-header-label">${subcat.label.en}</span><span class="subcat-header-chevron">›</span>`;
-            section.appendChild(header);
-
-            const row = document.createElement('div');
-            row.className = 'subcat-cards';
-            sectionItems.forEach(item => {
-                const card = isUpdates
-                    ? makeCard(item.icon, item.title, item.subtitle)
-                    : makeCard(item.icon, item.nameEN, item.details?.[0]?.value ?? '');
-                card.addEventListener('click', () =>
-                    isUpdates ? openUpdatePopup(item) : openItemPopup(item, cat));
-                row.appendChild(card);
-            });
-            section.appendChild(row);
-            grid.appendChild(section);
-        });
-    } else {
-        // Fallback: no config found — render flat list (original behavior)
-        allItems.forEach(item => {
-            const card = isUpdates
-                ? makeCard(item.icon, item.title, item.subtitle)
-                : makeCard(item.icon, item.nameEN, item.details?.[0]?.value ?? '');
-            card.addEventListener('click', () =>
-                isUpdates ? openUpdatePopup(item) : openItemPopup(item, cat));
-            grid.appendChild(card);
-        });
-    }
+    renderCategoryGrid(cat, catConfig, isUpdates);
 
     document.getElementById('categoryScreen').classList.add('open');
-    showMainOverlays(false); // hide menu btn and touch-to-explore while category screen is open
+    showMainOverlays(false);
 
-    // Pause video to reduce distraction behind the category screen overlay
     const vid = document.getElementById('mainVideo');
     if (!vid.paused) { vid.pause(); S.videoPaused = true; }
 
@@ -1002,17 +1152,352 @@ function openCategoryScreen(cat) {
     syncInteractingClass();
 }
 
+/* Render the main content area of the category screen.
+   Called on initial open and when language is toggled. */
+function renderCategoryGrid(cat, catConfig, isUpdates) {
+    const grid = document.getElementById('providerGrid');
+    grid.innerHTML = '';
+
+    // ── Building Updates: keep original horizontal-card layout ──────────────
+    if (isUpdates) {
+        grid.classList.remove('offer-mode');
+        const allItems = MOCK_UPDATES;
+        if (catConfig && catConfig.subcategories.length > 0) {
+            const sortedSubs = [...catConfig.subcategories].sort((a, b) => a.order - b.order);
+            const fallbackId = catConfig.fallbackSubcategoryId;
+            const orphans = allItems.filter(item => {
+                const ids = item.subCategoryIds || [];
+                return ids.length === 0 || !sortedSubs.some(s => ids.includes(s.id));
+            });
+            sortedSubs.forEach(subcat => {
+                const matched = allItems.filter(item => (item.subCategoryIds || []).includes(subcat.id));
+                const extras  = subcat.id === fallbackId ? orphans : [];
+                const sectionItems = matched.concat(extras.filter(o => !matched.includes(o)));
+                if (sectionItems.length === 0) return;
+                const section = document.createElement('div');
+                section.className = 'subcat-section';
+                const header = document.createElement('div');
+                header.className = 'subcat-header';
+                header.innerHTML = `<span class="subcat-header-label">${
+                    uiLang === 'th' ? (subcat.label.th || subcat.label.en) : subcat.label.en
+                }</span><span class="subcat-header-chevron">›</span>`;
+                section.appendChild(header);
+                const row = document.createElement('div');
+                row.className = 'subcat-cards';
+                sectionItems.forEach(item => {
+                    const card = makeCard(item.icon, item.title, item.subtitle);
+                    card.addEventListener('click', () => openUpdatePopup(item));
+                    row.appendChild(card);
+                });
+                section.appendChild(row);
+                grid.appendChild(section);
+            });
+        } else {
+            allItems.forEach(item => {
+                const card = makeCard(item.icon, item.title, item.subtitle);
+                card.addEventListener('click', () => openUpdatePopup(item));
+                grid.appendChild(card);
+            });
+        }
+        return;
+    }
+
+    // ── Offer-centric 2-col grid with looped vertical scroll ──────────────────
+    grid.classList.add('offer-mode');
+
+    const providers = MOCK_PROVIDERS[cat] || [];
+
+    // Flatten all offers from all providers in this category
+    const allOfferItems = [];
+    providers.forEach(p => {
+        (p.offers || []).forEach(o => {
+            allOfferItems.push({ offer: o, provider: p });
+        });
+    });
+
+    if (allOfferItems.length === 0) {
+        grid.classList.remove('offer-mode');
+        const empty = document.createElement('div');
+        empty.style.cssText = 'padding:5vh 2vh;text-align:center;color:rgba(255,255,255,0.38);font-size:1.8vh;';
+        empty.textContent = uiLang === 'th' ? 'ยังไม่มีรายการ' : 'No items available';
+        grid.appendChild(empty);
+        return;
+    }
+
+    // Build section DOM (used twice for seamless loop)
+    function buildSectionsFrag() {
+        const frag = document.createDocumentFragment();
+        if (catConfig && catConfig.subcategories.length > 0) {
+            const sortedSubs = [...catConfig.subcategories].sort((a, b) => a.order - b.order);
+            const fallbackId = catConfig.fallbackSubcategoryId;
+            const orphans = allOfferItems.filter(({ offer }) => {
+                const ids = offer.subCategories || [];
+                return ids.length === 0 || !sortedSubs.some(s => ids.includes(s.id));
+            });
+            sortedSubs.forEach(subcat => {
+                const matched = allOfferItems.filter(({ offer }) =>
+                    (offer.subCategories || []).includes(subcat.id));
+                const extras = subcat.id === fallbackId ? orphans : [];
+                const sectionItems = [...matched, ...extras.filter(o => !matched.includes(o))];
+                if (sectionItems.length === 0) return;
+                frag.appendChild(buildOfferSection(
+                    uiLang === 'th' ? (subcat.label.th || subcat.label.en) : subcat.label.en,
+                    sectionItems, cat
+                ));
+            });
+        } else {
+            frag.appendChild(buildOfferSection(null, allOfferItems, cat));
+        }
+        return frag;
+    }
+
+    // Looped scroll container
+    const loopEl = document.createElement('div');
+    loopEl.className = 'offer-loop-container';
+    loopEl.appendChild(buildSectionsFrag());
+    grid.appendChild(loopEl);
+
+    // Vertical circular scroll — jump-back technique (A+B+C triple list).
+    // Measured after two rAF passes so the element has been laid out.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        const oneH = loopEl.scrollHeight;           // height of one content copy
+        if (oneH <= loopEl.clientHeight || oneH === 0) {
+            // Content fits vertically — no vertical loop needed.
+            // Still initialise horizontal carousels in the single copy.
+            loopEl.querySelectorAll('.offer-carousel-track').forEach(initOfferCarousel);
+            return;
+        }
+
+        // Triple via fresh DOM builds — innerHTML serialisation destroys event listeners.
+        // Each buildSectionsFrag() call creates a new DOM tree with fresh listeners.
+        loopEl.innerHTML = '';                      // discard the initial (now-measured) copy
+        loopEl.appendChild(buildSectionsFrag());    // A
+        loopEl.appendChild(buildSectionsFrag());    // B  ← user starts here
+        loopEl.appendChild(buildSectionsFrag());    // C
+        loopEl.scrollTop = oneH;                    // start viewport at top of B
+
+        // On every scroll tick: if we drift into A or C, silently jump back into B.
+        // Because A == B == C, the jump is invisible to the user.
+        loopEl.addEventListener('scroll', function () {
+            const st = this.scrollTop;
+            if (st < oneH)           this.scrollTop = st + oneH;  // drifted into A → jump to B
+            else if (st >= oneH * 2) this.scrollTop = st - oneH;  // drifted into C → jump to B
+        }, { passive: true });
+
+        // Initialise horizontal carousels in all three vertical copies.
+        requestAnimationFrame(function () {
+            loopEl.querySelectorAll('.offer-carousel-track').forEach(initOfferCarousel);
+        });
+    }));
+}
+
+/* Reliable tap inside overflow-y:scroll containers on Android WebView.
+   touchend fires first; preventDefault() stops the deferred synthetic click
+   so fn() only executes once. Falls back to click on desktop (no touch). */
+function addTap(el, fn) {
+    let moved = false;
+    el.addEventListener('touchstart', () => { moved = false; }, { passive: true });
+    el.addEventListener('touchmove',  () => { moved = true;  }, { passive: true });
+    el.addEventListener('touchend', function(e) {
+        if (!moved) { e.preventDefault(); fn(); }
+    }); // intentionally not passive — preventDefault cancels the synthetic click
+    el.addEventListener('click', fn); // desktop / mouse fallback (touch won't re-fire)
+}
+
+function buildOfferSection(label, offerItems, cat) {
+    const section = document.createElement('div');
+    section.className = 'offer-subcat-section';
+    if (label) {
+        const lbl = document.createElement('div');
+        lbl.className = 'offer-subcat-label';
+        lbl.textContent = label;
+        section.appendChild(lbl);
+    }
+    const track = document.createElement('div');
+    track.className = 'offer-carousel-track';
+    offerItems.forEach(({ offer, provider }) => {
+        const card = makeOfferCard(offer, provider);
+        addTap(card, () => openOfferPopup(offer, provider, cat));
+        track.appendChild(card);
+    });
+    section.appendChild(track);
+    return section;
+}
+
+/* ========================================================
+   OFFER CAROUSEL — per-subcategory horizontal infinite loop
+   ≤ 2 cards : centred static row (fits without scrolling).
+   ≥ 3 cards : A+B+C triple list with jump-back loop,
+               identical technique to the vertical offer-loop-container.
+   Cards are 21 vh wide → ~2.5 visible in a 56.25 vh screen,
+   giving a clear partial-card "peek" that signals scrollability.
+======================================================== */
+function initOfferCarousel(track) {
+    const items = [...track.children];
+    const n = items.length;
+
+    // Few cards: fit without scrolling → centre, disable scroll
+    if (n <= 2) {
+        track.classList.add('carousel-static');
+        return;
+    }
+
+    // Build [A][B][C] in the track.
+    // B = original nodes (retain addTap listeners); A and C are visual clones only.
+    function cloneAll() { return items.map(function (it) { return it.cloneNode(true); }); }
+    track.innerHTML = '';
+    cloneAll().forEach(function (it) { track.appendChild(it); });   // A
+    items.forEach(function (it)      { track.appendChild(it); });   // B  (originals with listeners)
+    cloneAll().forEach(function (it) { track.appendChild(it); });   // C
+
+    requestAnimationFrame(function () {
+        // oneW = scroll distance equal to one full copy.
+        // Measured as the offsetLeft difference between first card of B and first card of A.
+        // This naturally includes the inter-item gap at the A→B boundary.
+        const allCards = track.children;
+        const oneW = allCards[n].offsetLeft - allCards[0].offsetLeft;
+        if (oneW <= 0) return;  // layout not ready — safety guard
+
+        track.scrollLeft = oneW;  // start viewport at beginning of B
+
+        // On every scroll tick: if we drift into A or C, silently jump back into B.
+        track.addEventListener('scroll', function () {
+            const sl = track.scrollLeft;
+            if (sl < oneW)           track.scrollLeft = sl + oneW;  // drifted into A → B
+            else if (sl >= oneW * 2) track.scrollLeft = sl - oneW;  // drifted into C → B
+        }, { passive: true });
+    });
+}
+
+function makeOfferCard(offer, provider) {
+    const card = document.createElement('div');
+    card.className = 'offer-card';
+
+    const imgSrc = offer.primaryImage || provider.coverImage || provider.thumbnail || '';
+    const imgWrap = document.createElement('div');
+    imgWrap.className = 'offer-card-img-wrap';
+    if (imgSrc) {
+        const img = document.createElement('img');
+        img.className = 'offer-card-img';
+        img.src = imgSrc; img.alt = ''; img.loading = 'lazy';
+        imgWrap.appendChild(img);
+    } else {
+        const ph = document.createElement('div');
+        ph.className = 'offer-card-img-ph';
+        ph.textContent = '🏪';
+        imgWrap.appendChild(ph);
+    }
+
+    // Provider name + logo as separate overlays
+    const provName = uiLang === 'th'
+        ? (provider.name_th || provider.name_en || '')
+        : (provider.name_en || provider.name_th || '');
+
+    // Logo — top-left
+    if (provider.logo) {
+        const logo = document.createElement('img');
+        logo.className = 'offer-card-logo-overlay';
+        logo.src = provider.logo; logo.alt = ''; logo.loading = 'lazy';
+        imgWrap.appendChild(logo);
+    }
+
+    // Name — bottom-right
+    if (provName) {
+        const nameEl = document.createElement('div');
+        nameEl.className = 'offer-card-provider-name';
+        nameEl.textContent = provName;
+        imgWrap.appendChild(nameEl);
+    }
+    card.appendChild(imgWrap);
+
+    const body = document.createElement('div');
+    body.className = 'offer-card-body';
+
+    const title = document.createElement('div');
+    title.className = 'offer-card-title';
+    title.textContent = uiLang === 'th'
+        ? (offer.title_th || offer.title_en || '')
+        : (offer.title_en || offer.title_th || '');
+    body.appendChild(title);
+
+    card.appendChild(body);
+    return card;
+}
+
 function makeCard(icon, name, sub) {
     const card = document.createElement('div');
     card.className = 'provider-card';
     card.innerHTML = `
-        <div class="provider-card-icon">${icon}</div>
-        <div class="provider-card-name">${name}</div>
-        <div class="provider-card-sub">${sub}</div>`;
+        <div class="provider-card-icon">${icon || ''}</div>
+        <div class="provider-card-name">${name || ''}</div>
+        <div class="provider-card-sub">${sub || ''}</div>`;
     return card;
 }
 
+/* Open offer-specific popup (reuses existing item popup elements) */
+function openOfferPopup(offer, provider, cat) {
+    // offerSlug drives OLP deep-link in the handoff QR; PLP is fallback if null
+    S.provider = provider; S.category = cat; S.offerSlug = offer.slug || null; S.popup = 'item';
+    S.offerTitleTH = offer.title_th || offer.title_en || null;
+    S.offerTitleEN = offer.title_en || offer.title_th || null;
+    S.offerTitle = uiLang === 'th' ? S.offerTitleTH : S.offerTitleEN;
+
+    // Build image list: offer.primaryImage → offer.images[] → provider fallback
+    const imgList = [];
+    if (offer.primaryImage) imgList.push(offer.primaryImage);
+    (offer.images || []).forEach(function (img) {
+        if (img && img !== offer.primaryImage) imgList.push(img);
+    });
+    if (!imgList.length && provider.coverImage) imgList.push(provider.coverImage);
+    if (!imgList.length && provider.logo)       imgList.push(provider.logo);
+    populateItemGallery(imgList);
+
+    // Title and provider name removed from overlay; short description shown instead
+    const ctxLang = uiLang;
+    document.getElementById('itemNameEN').textContent = '';
+    document.getElementById('itemNameTH').textContent = '';
+
+    // Meta: price + availability
+    const meta = [];
+    if (offer.price)        meta.push(offer.price);
+    if (offer.availability) meta.push(offer.availability);
+    document.getElementById('itemMeta').innerHTML =
+        meta.map(v => `<div class="meta-tag">${v}</div>`).join('');
+
+    // Short description as overlay inside gallery
+    document.getElementById('itemDesc').textContent = ctxLang === 'th'
+        ? (offer.shortDesc_th || offer.shortDesc_en || '')
+        : (offer.shortDesc_en || offer.shortDesc_th || '');
+
+    document.getElementById('itemContacts').innerHTML = '';
+
+    // CTA
+    const ctaMap = { viewMenu:'View Menu', order:'Order Now', book:'Book Now', contact:'Contact', viewListing:'View Listing' };
+    document.getElementById('itemCtaBtn').textContent = ctaMap[offer.ctaType] || CAT_CTA[cat] || 'View Details';
+
+    document.getElementById('itemBackdrop').classList.add('open');
+    resetIdle();
+    syncInteractingClass();
+}
+
 document.getElementById('backBtn').addEventListener('click', closeCategoryScreen);
+
+document.getElementById('langToggleBtn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    uiLang = uiLang === 'th' ? 'en' : 'th';
+    sessionStorage.setItem('kiosk_lang', uiLang);
+    this.textContent = uiLang === 'th' ? 'EN' : 'TH';
+    if (S.screen === 'category' && S.category) {
+        const configId = CAT_ID_MAP[S.category] || S.category;
+        const catConfig = categoryConfig.categories.find(c => c.id === configId);
+        const isUpdates = (S.category === 'building-updates' || S.category === 'updates');
+        document.getElementById('categoryScreenTitle').textContent = catConfig
+            ? (uiLang === 'th' ? (catConfig.label?.th || catConfig.label?.en) : catConfig.label?.en || S.category).toUpperCase()
+            : (CAT_LABELS[S.category] || S.category.toUpperCase());
+        renderCategoryGrid(S.category, catConfig, isUpdates);
+    }
+    resetIdle();
+});
 
 function closeCategoryScreen() {
     S.screen = 'main';
@@ -1040,6 +1525,9 @@ document.getElementById('touchToExplore').addEventListener('click', function() {
         const provider = (MOCK_PROVIDERS[cat] || []).find(p => p.slug === cur.providerSlug)
                       || Object.values(MOCK_PROVIDERS).flat().find(p => p.slug === cur.providerSlug);
         if (provider) {
+            // If the slot carries an offerSlug the handoff QR links to OLP (/m/o/);
+            // otherwise it falls back to PLP (/m/p/) via the provider slug.
+            S.offerSlug = cur.offerSlug || null;
             openItemPopup(provider, cat || 'services');
             return;
         }
@@ -1064,21 +1552,70 @@ document.getElementById('touchToExplore').addEventListener('click', function() {
 });
 
 /* ========================================================
+   ITEM GALLERY — shared helper for both offer and provider popups
+   Replaces the track element each call to clear stale scroll listeners.
+   imgList  : string[] of image URLs (may be empty)
+   phIcon   : emoji/text shown when imgList is empty
+======================================================== */
+function populateItemGallery(imgList, phIcon) {
+    const gallery  = document.getElementById('itemGallery');
+    const oldTrack = document.getElementById('itemGalleryTrack');
+    const track    = document.createElement('div');
+    track.className = 'item-popup-gallery-track';
+    track.id        = 'itemGalleryTrack';
+    gallery.replaceChild(track, oldTrack);
+
+    const dots = document.getElementById('itemGalleryDots');
+    dots.innerHTML = '';
+    dots.style.display = 'none';
+
+    if (!imgList.length) {
+        const ph = document.createElement('div');
+        ph.className   = 'item-popup-gallery-ph';
+        ph.textContent = phIcon || '🏪';
+        track.appendChild(ph);
+        return;
+    }
+
+    imgList.forEach(function (src, i) {
+        const img = document.createElement('img');
+        img.src     = src;
+        img.alt     = '';
+        img.loading = i === 0 ? 'eager' : 'lazy';
+        track.appendChild(img);
+    });
+
+    if (imgList.length > 1) {
+        dots.style.display = 'flex';
+        imgList.forEach(function (_, i) {
+            const dot = document.createElement('div');
+            dot.className = 'item-popup-gallery-dot' + (i === 0 ? ' active' : '');
+            dots.appendChild(dot);
+        });
+        track.addEventListener('scroll', function () {
+            const idx = Math.round(this.scrollLeft / this.offsetWidth);
+            [...dots.children].forEach(function (d, i) {
+                d.classList.toggle('active', i === idx);
+            });
+        }, { passive: true });
+    }
+}
+
+/* ========================================================
    ITEM POPUP
 ======================================================== */
 function openItemPopup(provider, cat) {
-    S.provider = provider; S.category = cat; S.popup = 'item';
+    S.provider = provider; S.category = cat; S.popup = 'item'; S.offerTitle = null; S.offerTitleTH = null; S.offerTitleEN = null;
 
-    document.getElementById('itemCover').style.background = provider.coverColor || '#102030';
-    document.getElementById('itemCover').textContent = provider.icon;
+    const provImgList = [provider.coverImage, provider.logo].filter(Boolean);
+    populateItemGallery(provImgList, provider.icon || '🏪');
     document.getElementById('itemNameEN').textContent = provider.nameEN;
     document.getElementById('itemNameTH').textContent = provider.nameTH;
+    document.getElementById('itemDesc').textContent = '';
 
     document.getElementById('itemMeta').innerHTML = (provider.details || [])
         .map(d => `<div class="meta-tag">${d.label ? d.label + ' ' : ''}${d.value || ''}</div>`)
         .join('');
-
-    document.getElementById('itemDesc').textContent = provider.description;
     document.getElementById('itemContacts').innerHTML = '';
 
     document.getElementById('itemCtaBtn').textContent = CAT_CTA[cat] || 'View Details';
@@ -1141,9 +1678,17 @@ function openHandoffPopup() {
     if (!p) return;
     S.popup = 'handoff';
 
-    const deepLink = `${CONFIG.HANDOFF_BASE}/${cat}/${p.slug}`;
-    document.getElementById('handoffHeading').textContent = `Scan to View ${p.nameEN}`;
-    document.getElementById('handoffSubheading').textContent = 'Scan the QR code with your phone to continue';
+    // OLP when an offer slug is known (QR → offer detail page by default).
+    // PLP as fallback when only a provider is available (e.g. category-screen tap).
+    const deepLink = S.offerSlug
+        ? `${CONFIG.HANDOFF_BASE}/o/${S.offerSlug}`
+        : `${CONFIG.HANDOFF_BASE}/p/${p.slug}`;
+    const offerTH = S.offerTitleTH || p.nameTH || p.nameEN || '';
+    const offerEN = S.offerTitleEN || p.nameEN || p.nameTH || '';
+    document.getElementById('handoffHeading').textContent    = `สแกนเพื่อดู ${offerTH}`;
+    document.getElementById('handoffHeadingEn').textContent  = `Scan to View ${offerEN}`;
+    document.getElementById('handoffSubheading').textContent   = 'สแกนคิวอาร์โค้ดด้วยโทรศัพท์ของท่านเพื่อดำเนินการต่อ';
+    document.getElementById('handoffSubheadingEn').textContent = 'Scan the QR code with your phone to continue';
 
     // QR code via qrserver.com — free, no auth, works in Android WebView
     document.getElementById('qrImage').src =
@@ -1160,7 +1705,8 @@ function openHandoffPopup() {
     }
 
     document.getElementById('phoneInput').value = '';
-    document.getElementById('sendConfirm').textContent = '';
+    document.getElementById('sendConfirmPanel').style.display = 'none';
+    document.getElementById('sendLinkBtn').style.display = '';
 
     // Transition: close item popup, open handoff
     document.getElementById('itemBackdrop').classList.remove('open');
@@ -1181,20 +1727,28 @@ function closeHandoffPopup() {
     syncInteractingClass();
 }
 
-// Send Link — UI only, no actual SMS
+// Send Link — UI only; shows conditional confirmation (no actual SMS sent)
 document.getElementById('sendLinkBtn').addEventListener('click', function() {
     const phone = document.getElementById('phoneInput').value.trim().replace(/\D/g, '');
-    const confirm = document.getElementById('sendConfirm');
+    const panel = document.getElementById('sendConfirmPanel');
+    const msg   = document.getElementById('sendConfirmMsg');
     if (!phone || phone.length < 8) {
         document.getElementById('phoneInput').focus();
-        confirm.textContent = 'Please enter a valid phone number.';
-        confirm.style.color = '#FF8C69';
+        msg.innerHTML = 'Please enter a valid phone number.<br><span style="font-size:0.92em;">กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง</span>';
+        msg.style.color = '#FF8C69';
+        panel.style.display = 'flex';
         return;
     }
-    confirm.textContent = `✅ Link sent to +66 ${phone}`;
-    confirm.style.color = '#4CAF50';
+    msg.innerHTML = `The seller/service provider will be in touch with you shortly.<br><span style="color:rgba(255,255,255,0.6);font-size:0.92em;">ผู้ขาย/ผู้ให้บริการจะติดต่อกลับคุณในเร็ว ๆ นี้</span>`;
+    msg.style.color = 'rgba(255,255,255,0.85)';
+    panel.style.display = 'flex';
+    document.getElementById('sendLinkBtn').style.display = 'none';
     document.getElementById('phoneInput').value = '';
-    setTimeout(() => { confirm.textContent = ''; }, 4000);
+});
+
+document.getElementById('sendConfirmOk').addEventListener('click', function() {
+    document.getElementById('sendConfirmPanel').style.display = 'none';
+    document.getElementById('sendLinkBtn').style.display = '';
 });
 
 /* ========================================================
@@ -1313,13 +1867,28 @@ async function fetchNews() {
         try { updateNewsUI(JSON.parse(cd)); } catch(e2) { mockNews(); }
     }
 }
+function setTickerSpeed(ticker) {
+    // Set animation duration so ticker scrolls at a fixed 120px/s regardless of content length.
+    // Content is doubled (html+html), animation goes 0→-50%, so visible distance = half total width.
+    const speed = 58; // px per second
+    const halfWidth = ticker.scrollWidth / 2;
+    const duration = Math.max(10, Math.round(halfWidth / speed));
+    ticker.style.animationDuration = duration + 's';
+    // Restart animation cleanly
+    ticker.style.animation = 'none';
+    ticker.offsetHeight; // force reflow
+    ticker.style.animation = '';
+    ticker.style.animationDuration = duration + 's';
+}
 function updateNewsUI(d) {
     try {
         const html = d.results.map(a => {
             if (!a?.title) return '';
             return `<span class="news-item">${a.title.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span><span class="news-separator">•</span>`;
         }).filter(Boolean).join('');
-        document.getElementById('newsTicker').innerHTML = html + html;
+        const ticker = document.getElementById('newsTicker');
+        ticker.innerHTML = html + html;
+        setTickerSpeed(ticker);
     } catch(e) { mockNews(); }
 }
 function mockNews() {
@@ -1331,7 +1900,9 @@ function mockNews() {
         'Thailand leads ASEAN in sustainable tourism initiatives'
     ];
     const html = items.map(t => `<span class="news-item">${t}</span><span class="news-separator">•</span>`).join('');
-    document.getElementById('newsTicker').innerHTML = html + html;
+    const ticker = document.getElementById('newsTicker');
+    ticker.innerHTML = html + html;
+    setTickerSpeed(ticker);
 }
 
 /* ========================================================
@@ -1442,13 +2013,20 @@ function playVideo() {
             imageTimer = setTimeout(() => { notice.classList.add('video-hidden'); advance(); }, secs * 1000);
 
         } else if (cur.mediaType === 'image') {
-            // ── Image slot (promo image or notice with image asset) ───────────
-            // duration = slot override ?? media default ?? 10 s
+            // ── Image slot: single image or multi-image slideshow ─────────────
+            // duration = slot override ?? media default ?? 10 s (applied per image)
             const secs = cur.imageDurationOverride ?? cur.defaultDuration ?? 10;
-            hideAll();
-            img.src = cur.url || '';
-            img.classList.remove('video-hidden');
-            imageTimer = setTimeout(advance, secs * 1000);
+            const urls = (cur.images?.length > 0) ? cur.images : (cur.url ? [cur.url] : []);
+            if (urls.length === 0) { advance(); return; }
+            let imgIdx = 0;
+            function showNextImage() {
+                if (imgIdx >= urls.length) { advance(); return; }
+                hideAll();
+                img.src = urls[imgIdx++];
+                img.classList.remove('video-hidden');
+                imageTimer = setTimeout(showNextImage, secs * 1000);
+            }
+            showNextImage();
 
         } else {
             // ── Video slot (promo video or notice with video asset) ───────────
@@ -1488,7 +2066,10 @@ function playVideo() {
 ======================================================== */
 async function init() {
     // ── Clear stale localStorage keys from previous sessions ────────────────
-    ['weather_data','weather_data_time','news_data','news_data_time'].forEach(k => localStorage.removeItem(k));
+    ['weather_data','weather_data_time','news_data','news_ts'].forEach(k => localStorage.removeItem(k));
+
+    // ── Init lang toggle button label ────────────────────────────────────────
+    document.getElementById('langToggleBtn').textContent = uiLang === 'th' ? 'EN' : 'TH';
 
     // ── Load all data sources in parallel ───────────────────────────────────
     await Promise.all([loadPlaylist(), loadCategoryConfig(), loadProviders(), loadBuildingUpdates()]);
