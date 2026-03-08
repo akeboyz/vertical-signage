@@ -729,6 +729,7 @@ const CONFIG = {
     CITY_ROTATION_INTERVAL: 8000,   // 8 seconds
     IDLE_TIMEOUT: 60000,            // 60 seconds — applied to Category, Item, Handoff states
     HANDOFF_BASE: 'https://aquamx.biz/m',
+    LEAD_API:     'https://aquamx.biz/api/lead',
 
     // ── Sanity CMS ────────────────────────────────────────────────────────────
     // Fill these in after running `npm create sanity@latest` in sanity-studio/
@@ -1729,12 +1730,14 @@ function closeHandoffPopup() {
     syncInteractingClass();
 }
 
-// Send Link — UI only; shows conditional confirmation (no actual SMS sent)
-document.getElementById('sendLinkBtn').addEventListener('click', function() {
+// Submit Number — saves lead to backend, then shows confirmation
+document.getElementById('sendLinkBtn').addEventListener('click', async function() {
     const phone = document.getElementById('phoneInput').value.trim().replace(/\D/g, '');
     const panel = document.getElementById('sendConfirmPanel');
     const msg   = document.getElementById('sendConfirmMsg');
-    const isTH = uiLang === 'th';
+    const btn   = this;
+    const isTH  = uiLang === 'th';
+
     if (!phone || phone.length < 8) {
         document.getElementById('phoneInput').focus();
         msg.textContent = isTH ? 'กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง' : 'Please enter a valid phone number.';
@@ -1742,13 +1745,45 @@ document.getElementById('sendLinkBtn').addEventListener('click', function() {
         panel.style.display = 'flex';
         return;
     }
+
+    // Disable button to prevent double-submit
+    btn.disabled = true;
+
+    // Build lead payload using current signage state
+    const p = S.provider;
+    const leadPayload = {
+        phone,
+        offer_id:      S.offerSlug    || null,
+        offer_title:   (isTH ? S.offerTitleTH : S.offerTitleEN) || null,
+        provider_id:   p?.slug        || null,
+        provider_name: (isTH ? (p?.nameTH || p?.nameEN) : (p?.nameEN || p?.nameTH)) || null,
+        screen_id:     window.__BAKED__?.projectCode  || null,
+        screen_name:   window.__BAKED__?.projectCode  || null,
+        project_name:  window.__BAKED__?.projectTitle || null,
+        language:      uiLang,
+        source:        'kiosk',
+    };
+
+    // POST to backend (non-blocking on failure — always show confirmation)
+    try {
+        await fetch(CONFIG.LEAD_API, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(leadPayload),
+        });
+    } catch (err) {
+        console.error('[Lead] Submission failed:', err);
+    }
+
+    // Show confirmation regardless of API success
     msg.textContent = isTH
         ? 'ผู้ขาย/ผู้ให้บริการจะติดต่อกลับคุณในเร็ว ๆ นี้'
         : 'The seller/service provider will be in touch with you shortly.';
-    msg.style.color = 'rgba(255,255,255,0.85)';
+    msg.style.color  = 'rgba(255,255,255,0.85)';
     panel.style.display = 'flex';
-    document.getElementById('sendLinkBtn').style.display = 'none';
+    btn.style.display   = 'none';
     document.getElementById('phoneInput').value = '';
+    btn.disabled = false;
 });
 
 document.getElementById('sendConfirmOk').addEventListener('click', function() {
