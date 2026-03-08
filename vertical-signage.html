@@ -344,9 +344,7 @@
 
         /* ==================== HANDOFF POPUP ==================== */
         .handoff-heading { font-size: 2vh; font-weight: 700; color: #fff; text-align: center; margin-top: 0.5vh; }
-        .handoff-heading-en { font-size: 1.55vh; font-weight: 500; color: rgba(255,255,255,0.65); text-align: center; margin-top: 0.3vh; }
         .handoff-subheading { font-size: 1.45vh; color: rgba(255,255,255,0.55); text-align: center; }
-        .handoff-subheading-en { font-size: 1.25vh; color: rgba(255,255,255,0.38); text-align: center; margin-top: 0.2vh; }
         .qr-wrap {
             background: #fff; border-radius: 1.8vh; padding: 1.5vh;
             display: flex; align-items: center; justify-content: center; align-self: center;
@@ -685,23 +683,20 @@
                 <div class="popup-box" id="handoffPopupBox">
                     <button class="popup-close" id="handoffClose">✕</button>
                     <div class="handoff-heading" id="handoffHeading"></div>
-                    <div class="handoff-heading-en" id="handoffHeadingEn"></div>
                     <div class="handoff-subheading" id="handoffSubheading"></div>
-                    <div class="handoff-subheading-en" id="handoffSubheadingEn"></div>
                     <div class="qr-wrap"><img id="qrImage" src="" alt="QR Code" width="180" height="180"></div>
                     <div class="qr-url" id="qrUrl"></div>
                     <div class="handoff-unit-ref" id="handoffUnitRef" style="display:none;"></div>
                     <div class="or-divider">or</div>
-                    <div class="phone-label">กรอกเบอร์โทรเพื่อให้ติดต่อกลับ</div>
-                    <div class="handoff-subheading-en" style="margin-bottom:0.6vh;">Enter your phone number to be contacted</div>
+                    <div class="phone-label" id="handoffPhoneLabel"></div>
                     <div class="phone-row">
                         <div class="phone-prefix">+66</div>
                         <input class="phone-input" id="phoneInput" type="tel" inputmode="numeric" maxlength="10" placeholder="8X XXX XXXX">
                     </div>
-                    <button class="popup-cta-btn" id="sendLinkBtn">Send Link</button>
+                    <button class="popup-cta-btn" id="sendLinkBtn"></button>
                     <div class="send-confirm-panel" id="sendConfirmPanel" style="display:none;">
                         <div class="send-confirm-msg" id="sendConfirmMsg"></div>
-                        <button class="send-confirm-ok-btn" id="sendConfirmOk">OK</button>
+                        <button class="send-confirm-ok-btn" id="sendConfirmOk"></button>
                     </div>
                 </div>
             </div>
@@ -1683,12 +1678,19 @@ function openHandoffPopup() {
     const deepLink = S.offerSlug
         ? `${CONFIG.HANDOFF_BASE}/o/${S.offerSlug}`
         : `${CONFIG.HANDOFF_BASE}/p/${p.slug}`;
-    const offerTH = S.offerTitleTH || p.nameTH || p.nameEN || '';
-    const offerEN = S.offerTitleEN || p.nameEN || p.nameTH || '';
-    document.getElementById('handoffHeading').textContent    = `สแกนเพื่อดู ${offerTH}`;
-    document.getElementById('handoffHeadingEn').textContent  = `Scan to View ${offerEN}`;
-    document.getElementById('handoffSubheading').textContent   = 'สแกนคิวอาร์โค้ดด้วยโทรศัพท์ของท่านเพื่อดำเนินการต่อ';
-    document.getElementById('handoffSubheadingEn').textContent = 'Scan the QR code with your phone to continue';
+    const isTH = uiLang === 'th';
+    const offerLabel = isTH
+        ? (S.offerTitleTH || p.nameTH || p.nameEN || '')
+        : (S.offerTitleEN || p.nameEN || p.nameTH || '');
+    document.getElementById('handoffHeading').textContent  = isTH ? `สแกนเพื่อดู ${offerLabel}` : `Scan to View ${offerLabel}`;
+    document.getElementById('handoffSubheading').textContent = isTH
+        ? 'สแกนคิวอาร์โค้ดด้วยโทรศัพท์ของท่านเพื่อดำเนินการต่อ'
+        : 'Scan the QR code with your phone to continue';
+    document.getElementById('handoffPhoneLabel').textContent = isTH
+        ? 'กรอกเบอร์โทรเพื่อให้ติดต่อกลับ'
+        : 'Enter your phone number to be contacted';
+    document.getElementById('sendLinkBtn').textContent = isTH ? 'ส่งลิงก์' : 'Send Link';
+    document.getElementById('sendConfirmOk').textContent = isTH ? 'ตกลง' : 'OK';
 
     // QR code via qrserver.com — free, no auth, works in Android WebView
     document.getElementById('qrImage').src =
@@ -1732,14 +1734,17 @@ document.getElementById('sendLinkBtn').addEventListener('click', function() {
     const phone = document.getElementById('phoneInput').value.trim().replace(/\D/g, '');
     const panel = document.getElementById('sendConfirmPanel');
     const msg   = document.getElementById('sendConfirmMsg');
+    const isTH = uiLang === 'th';
     if (!phone || phone.length < 8) {
         document.getElementById('phoneInput').focus();
-        msg.innerHTML = 'Please enter a valid phone number.<br><span style="font-size:0.92em;">กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง</span>';
+        msg.textContent = isTH ? 'กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง' : 'Please enter a valid phone number.';
         msg.style.color = '#FF8C69';
         panel.style.display = 'flex';
         return;
     }
-    msg.innerHTML = `The seller/service provider will be in touch with you shortly.<br><span style="color:rgba(255,255,255,0.6);font-size:0.92em;">ผู้ขาย/ผู้ให้บริการจะติดต่อกลับคุณในเร็ว ๆ นี้</span>`;
+    msg.textContent = isTH
+        ? 'ผู้ขาย/ผู้ให้บริการจะติดต่อกลับคุณในเร็ว ๆ นี้'
+        : 'The seller/service provider will be in touch with you shortly.';
     msg.style.color = 'rgba(255,255,255,0.85)';
     panel.style.display = 'flex';
     document.getElementById('sendLinkBtn').style.display = 'none';
