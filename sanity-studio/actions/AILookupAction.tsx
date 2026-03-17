@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useToast, Box, Stack, Text, Button, Flex, Card, Spinner } from '@sanity/ui'
 import type { DocumentActionProps } from 'sanity'
-import { useDocumentOperation, useFormValue } from 'sanity'
+import { useDocumentOperation } from 'sanity'
 
 const LOOKUP_URL =
   (process.env.SANITY_STUDIO_API_BASE_URL ?? 'https://aquamx-handoff.netlify.app') +
@@ -33,7 +33,8 @@ export function AILookupAction(props: DocumentActionProps) {
   const { patch } = useDocumentOperation(props.id, props.type)
   const toast      = useToast()
 
-  const projectEn = useFormValue(['projectEn']) as string | undefined
+  // Read from draft first, fall back to published — avoids useFormValue (not available in action context)
+  const projectEn = ((props.draft ?? props.published) as any)?.projectEn as string | undefined
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [loading,    setLoading]    = useState(false)
