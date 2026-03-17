@@ -118,16 +118,11 @@ export default defineType({
           title:  'Stage',
           fields: [
             defineField({
-              name:       'stage',
-              title:      'Stage Number',
-              type:       'number',
-              validation: Rule => Rule.required().min(1),
-            }),
-            defineField({
               name:  'label',
               title: 'Stage Label',
               type:  'string',
               description: 'e.g. "Sales Manager Review"',
+              validation: Rule => Rule.required(),
             }),
             defineField({
               name:       'approver',
@@ -138,9 +133,9 @@ export default defineType({
             }),
           ],
           preview: {
-            select: { stage: 'stage', label: 'label', approver: 'approver.title' },
-            prepare({ stage, label, approver }) {
-              return { title: `Stage ${stage}: ${label ?? ''}`, subtitle: approver ?? '—' }
+            select: { label: 'label', approver: 'approver.title' },
+            prepare({ label, approver }) {
+              return { title: label ?? '—', subtitle: approver ?? '—' }
             },
           },
         }),
