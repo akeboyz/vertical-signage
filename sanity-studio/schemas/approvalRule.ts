@@ -141,6 +141,31 @@ export default defineType({
         }),
       ],
     }),
+
+    // ── On Approval — what to send ────────────────────────────────────────────
+    defineField({
+      name:        'onApprovalSend',
+      title:       'On Final Approval — Send',
+      type:        'object',
+      description: 'Controls what is included in the notification email when all stages are approved.',
+      options:     { collapsible: true, collapsed: false },
+      fields: [
+        defineField({
+          name:         'attachPdf',
+          title:        'Attach PDF',
+          type:         'boolean',
+          initialValue: true,
+          description:  'Attach the generated PDF file to the notification email.',
+        }),
+        defineField({
+          name:         'includeDocLink',
+          title:        'Include Google Doc link',
+          type:         'boolean',
+          initialValue: true,
+          description:  'Include a link to the editable Google Doc in the email body.',
+        }),
+      ],
+    }),
   ],
 
   preview: {
