@@ -52,6 +52,13 @@ export default defineConfig({
             S.view.component(GenerateView).id('generate').title('Generate'),
           ])
         }
+        if (schemaType === 'projectSite') {
+          return S.document().views([
+            S.view.component(DocumentOverview).id('overview').title('Overview'),
+            S.view.form().id('edit').title('Edit'),
+            S.view.component(ApprovalView).id('approval').title('Approval'),
+          ])
+        }
         return S.document().views([
           S.view.component(DocumentOverview).id('overview').title('Overview'),
           S.view.form().id('edit').title('Edit'),

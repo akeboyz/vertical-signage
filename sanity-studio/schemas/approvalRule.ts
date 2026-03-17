@@ -30,9 +30,10 @@ export default defineType({
       title:   'Applies To',
       type:    'string',
       options: { list: [
-        { title: 'Quotation',       value: 'quotation' },
-        { title: 'Contract',        value: 'contract'  },
-        { title: 'Both',            value: 'both'      },
+        { title: 'Quotation',    value: 'quotation'    },
+        { title: 'Contract',     value: 'contract'     },
+        { title: 'Project Site', value: 'projectSite'  },
+        { title: 'Both',         value: 'both'         },
       ]},
       validation: Rule => Rule.required(),
     }),
