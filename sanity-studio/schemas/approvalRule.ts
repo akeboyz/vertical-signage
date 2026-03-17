@@ -1,4 +1,5 @@
 import { defineField, defineType, defineArrayMember } from 'sanity'
+import { DocumentTypeSelect } from '../components/DocumentTypeSelect'
 
 /**
  * ApprovalRule — configures who must approve and under what conditions.
@@ -26,16 +27,12 @@ export default defineType({
     }),
 
     defineField({
-      name:    'documentType',
-      title:   'Applies To',
-      type:    'string',
-      options: { list: [
-        { title: 'Quotation',    value: 'quotation'    },
-        { title: 'Contract',     value: 'contract'     },
-        { title: 'Project Site', value: 'projectSite'  },
-        { title: 'Both',         value: 'both'         },
-      ]},
-      validation: Rule => Rule.required(),
+      name:        'documentType',
+      title:       'Applies To',
+      type:        'string',
+      description: 'Select a static type or a specific Contract Type. New Contract Types appear here automatically.',
+      components:  { input: DocumentTypeSelect },
+      validation:  Rule => Rule.required(),
     }),
 
     defineField({
@@ -172,9 +169,16 @@ export default defineType({
   preview: {
     select: { title: 'name', type: 'documentType', active: 'isActive', priority: 'priority' },
     prepare({ title, type, active, priority }) {
+      const STATIC_LABELS: Record<string, string> = {
+        quotation:   'Quotation',
+        contract:    'Any Contract',
+        projectSite: 'Project Site',
+        both:        'Both',
+      }
+      const typeLabel = STATIC_LABELS[type] ?? (type ? `Contract Type: ${type.slice(0, 8)}…` : '—')
       return {
         title:    `${active === false ? '(Inactive) ' : ''}${title ?? '—'}`,
-        subtitle: `${type ?? '—'} — priority ${priority ?? '?'}`,
+        subtitle: `${typeLabel} — priority ${priority ?? '?'}`,
       }
     },
   },
