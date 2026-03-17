@@ -1,4 +1,4 @@
-import { defineConfig } from 'sanity'
+import { defineConfig, definePlugin } from 'sanity'
 import { structureTool } from 'sanity/structure'
 import { visionTool } from '@sanity/vision'
 import { schemaTypes } from './schemas'
@@ -7,6 +7,21 @@ import { ProjectPublishAction } from './actions/projectPublishAction'
 import { AddToPlaylistAction }  from './actions/addToPlaylistAction'
 import { MediaPublishAction }   from './actions/mediaPublishAction'
 import { DocumentOverview }     from './views/DocumentOverview'
+import { GenerateView }         from './views/GenerateView'
+import { ApprovalView }         from './views/ApprovalView'
+import { dataImportPlugin }     from './plugins/data-import'
+import { HowToTool }            from './tools/HowToTool'
+
+const howToPlugin = definePlugin({
+  name: 'how-to-guide',
+  tools: [
+    {
+      name:      'how-to',
+      title:     'How-To Guide',
+      component: HowToTool,
+    },
+  ],
+})
 
 const PROJECT_ID = 'awjj9g8u'
 const DATASET    = 'production'
@@ -19,6 +34,8 @@ export default defineConfig({
   dataset:   DATASET,
 
   plugins: [
+    dataImportPlugin(),
+    howToPlugin(),
     structureTool({
       // Every document opens in read-only Overview by default.
       // The user clicks the "Edit" tab to make changes.
@@ -26,6 +43,14 @@ export default defineConfig({
       defaultDocumentNode: (S, { schemaType }) => {
         if (schemaType === 'categoryConfig') {
           return S.document().views([S.view.form().id('edit').title('Edit')])
+        }
+        if (schemaType === 'contract') {
+          return S.document().views([
+            S.view.component(DocumentOverview).id('overview').title('Overview'),
+            S.view.form().id('edit').title('Edit'),
+            S.view.component(ApprovalView).id('approval').title('Approval'),
+            S.view.component(GenerateView).id('generate').title('Generate'),
+          ])
         }
         return S.document().views([
           S.view.component(DocumentOverview).id('overview').title('Overview'),
@@ -85,6 +110,20 @@ export default defineConfig({
                   .title('Global Category Config')
               ),
 
+            S.divider(),
+
+            // ── Contracts ─────────────────────────────────────────────────────
+            S.documentTypeListItem('projectSite').title('Project Sites'),
+            S.documentTypeListItem('contractType').title('Contract Types'),
+            S.documentTypeListItem('contract').title('Contracts'),
+
+            S.divider(),
+
+            // ── Approval ──────────────────────────────────────────────────────
+            S.documentTypeListItem('approvalPosition').title('Approver Positions'),
+            S.documentTypeListItem('approvalRule').title('Approval Rules'),
+            S.documentTypeListItem('approvalRequest').title('Approval Requests'),
+
           ]),
     }),
 
@@ -130,6 +169,10 @@ export default defineConfig({
       if (ctx.schemaType === 'categoryConfig') {
         // Singleton — block delete and duplicate so it can't be destroyed or duplicated.
         return prev.filter(a => !['delete', 'duplicate'].includes((a as any).action))
+      }
+      if (ctx.schemaType === 'contract') {
+        // Generation is handled by the dedicated Generate tab — no extra actions needed.
+        return prev
       }
       return prev
     },

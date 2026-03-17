@@ -66,7 +66,14 @@ export function DocumentOverview({ document: { draft, published, displayed: doc 
     )
   }
 
-  const heading = doc.title ?? doc.nameEN ?? doc.name ?? '(Untitled)'
+  const heading =
+    doc.title          ??
+    doc.nameEN         ??
+    doc.name           ??
+    doc.contractNumber ??
+    doc.quotationNumber ??
+    doc.customerName   ??
+    '(Untitled)'
   const rows = Object.entries(doc)
     .filter(([key]) => !SKIP.has(key))
     .map(([key, val]) => ({ key, label: formatKey(key), display: formatValue(val) }))
