@@ -7,6 +7,7 @@ import { ProjectPublishAction } from './actions/projectPublishAction'
 import { AddToPlaylistAction }  from './actions/addToPlaylistAction'
 import { MediaPublishAction }   from './actions/mediaPublishAction'
 import { DocumentOverview }     from './views/DocumentOverview'
+import { AILookupAction }      from './actions/AILookupAction'
 import { GenerateView }         from './views/GenerateView'
 import { ApprovalView }         from './views/ApprovalView'
 import { dataImportPlugin }     from './plugins/data-import'
@@ -180,6 +181,9 @@ export default defineConfig({
       if (ctx.schemaType === 'contract') {
         // Generation is handled by the dedicated Generate tab — no extra actions needed.
         return prev
+      }
+      if (ctx.schemaType === 'projectSite') {
+        return [...prev, AILookupAction]
       }
       return prev
     },

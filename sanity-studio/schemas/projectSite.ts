@@ -1,4 +1,5 @@
-import { defineField, defineType } from 'sanity'
+import { defineField, defineType }       from 'sanity'
+import { ProjectNameTranslateInput }     from '../components/ProjectNameTranslateInput'
 
 /**
  * Project Site — master record for a condo/property project.
@@ -11,7 +12,7 @@ export default defineType({
 
   fields: [
     defineField({ name: 'projectEn',                 title: 'Project Name (EN)',           type: 'string', validation: Rule => Rule.required() }),
-    defineField({ name: 'projectTh',                 title: 'Project Name (TH)',           type: 'string' }),
+    defineField({ name: 'projectTh', title: 'Project Name (TH)', type: 'string', components: { input: ProjectNameTranslateInput } }),
     defineField({ name: 'address',                   title: 'Address',                     type: 'text',   rows: 2 }),
     defineField({ name: 'btsStation',                title: 'BTS / MRT Station',           type: 'string' }),
     defineField({ name: 'area',                      title: 'Area',                        type: 'string' }),
