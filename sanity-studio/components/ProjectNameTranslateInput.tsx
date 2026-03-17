@@ -30,7 +30,10 @@ export function ProjectNameTranslateInput(props: StringInputProps) {
       const res  = await fetch(TRANSLATE_API_URL, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ text: projectEn, sourceLang: 'English', targetLang: 'Thai' }),
+        body:    JSON.stringify({
+          text:        projectEn,
+          instruction: 'Transliterate the following English condominium or property project name into Thai script using phonetic transliteration — preserve the brand name sound, do NOT translate the meaning of individual words. Return only the Thai transliteration, no explanation, no quotes. Example: "Noble Remix" → "โนเบิล รีมิกซ์", "The Residences" → "เดอะ เรสซิเดนเซส".',
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
