@@ -50,6 +50,28 @@ export default defineType({
     // ── 1. Setup ──────────────────────────────────────────────────────────────
 
     defineField({
+      group:        'setup',
+      name:         'procurementStatus',
+      title:        'Procurement Status',
+      type:         'string',
+      description:  'Overall delivery status of the linked Procurement(s). Update manually or sync from Procurement.',
+      initialValue: 'created',
+      options: {
+        list: [
+          { title: '📝 Created',                  value: 'created'            },
+          { title: '🔄 Processing',               value: 'processing'         },
+          { title: '✅ Approved',                 value: 'approved'           },
+          { title: '📦 Order Placed',             value: 'order_placed'       },
+          { title: '🚚 Order Shipped',            value: 'order_shipped'      },
+          { title: '✅ Delivered — Accepted',     value: 'delivered_accepted' },
+          { title: '⚠️ Delivered — Partial',      value: 'delivered_partial'  },
+          { title: '❌ Delivered — Rejected',     value: 'delivered_rejected' },
+        ],
+        layout: 'radio',
+      },
+    }),
+
+    defineField({
       group:       'setup',
       name:        'procurements',
       title:       'Procurements',
