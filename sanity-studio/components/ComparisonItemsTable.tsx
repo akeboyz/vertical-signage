@@ -40,7 +40,12 @@ const th = (extra?: React.CSSProperties): React.CSSProperties => ({
   fontWeight:      600,
   fontSize:        12,
   verticalAlign:   'top',
-  minWidth:        160,
+  minWidth:        120,
+  maxWidth:        200,
+  width:           '1%',       // let columns share space equally
+  whiteSpace:      'normal',
+  wordBreak:       'break-word',
+  overflowWrap:    'anywhere',
   ...extra,
 })
 
@@ -62,10 +67,10 @@ const dataCell = (selected?: boolean): React.CSSProperties => ({
   borderRight:     '1px solid var(--card-border-color)',
   fontSize:        13,
   verticalAlign:   'top',
-  minWidth:        160,
   background:      selected ? 'rgba(0, 164, 74, 0.07)' : undefined,
-  whiteSpace:      'pre-wrap',
+  whiteSpace:      'normal',
   wordBreak:       'break-word',
+  overflowWrap:    'anywhere',
 })
 
 const groupHeader = (): React.CSSProperties => ({
@@ -161,14 +166,14 @@ export function ComparisonItemsTable(props: ArrayInputProps) {
             Comparison Summary
           </Text>
 
-          <Card border radius={2} style={{ overflowX: 'auto' }}>
+          <Card border radius={2} style={{ overflow: 'hidden' }}>
             {loadingSpec ? (
               <Flex align="center" gap={2} padding={3}>
                 <Spinner muted />
                 <Text size={1} muted>Loading spec definitions…</Text>
               </Flex>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
 
                 {/* ── Header row — vendor names ── */}
                 <thead>
