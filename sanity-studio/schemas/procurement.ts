@@ -76,16 +76,9 @@ export default defineType({
     defineField({
       group: 'spec',
       name:  'quantity',
-      title: 'Quantity',
+      title: 'Quantity Required',
       type:  'number',
       validation: Rule => Rule.min(1),
-    }),
-
-    defineField({
-      group: 'spec',
-      name:  'surveyedPrice',
-      title: 'Surveyed Price (per unit)',
-      type:  'number',
     }),
 
     defineField({
@@ -100,23 +93,60 @@ export default defineType({
       ],
     }),
 
-    // Dynamic spec fields — driven by selected Asset Type in Process Setup
+    // ── Comparison Items ──────────────────────────────────────────────────────
     defineField({
       group:       'spec',
-      name:        'specFields',
-      title:       'Spec Fields',
-      type:        'string',
-      description: 'Spec fields are defined per asset type in Process Setup → Asset Config.',
-      components:  { input: AssetSpecFieldsInput },
-    }),
-
-    defineField({
-      group: 'spec',
-      name:  'vendor',
-      title: 'Vendor',
-      type:  'reference',
-      to:    [{ type: 'party' }],
-      description: 'The vendor/supplier this procurement is with.',
+      name:        'comparisonItems',
+      title:       'Comparison Items',
+      type:        'array',
+      description: 'Add one entry per vendor being compared. Spec fields are driven by the selected Asset Type.',
+      of: [defineArrayMember({
+        type:   'object',
+        name:   'comparisonItem',
+        title:  'Comparison Item',
+        fields: [
+          defineField({
+            name:       'vendor',
+            title:      'Vendor',
+            type:       'reference',
+            to:         [{ type: 'party' }],
+            validation: Rule => Rule.required(),
+          }),
+          defineField({
+            name:  'quotedPrice',
+            title: 'Quoted Price (per unit, THB)',
+            type:  'number',
+          }),
+          defineField({
+            name:       'specFields',
+            title:      'Spec Values',
+            type:       'string',
+            description: 'Spec fields from the selected Asset Type.',
+            components: { input: AssetSpecFieldsInput },
+          }),
+          defineField({
+            name:         'selected',
+            title:        'Selected',
+            type:         'boolean',
+            description:  'Mark this vendor as the chosen option.',
+            initialValue: false,
+          }),
+          defineField({ name: 'notes', title: 'Notes', type: 'text', rows: 2 }),
+        ],
+        preview: {
+          select: {
+            vendor:   'vendor.legalName_en',
+            price:    'quotedPrice',
+            selected: 'selected',
+          },
+          prepare({ vendor, price, selected }: { vendor?: string; price?: number; selected?: boolean }) {
+            return {
+              title:    `${selected ? '✅ ' : ''}${vendor ?? '(no vendor)'}`,
+              subtitle: price ? `${Number(price).toLocaleString()} THB / unit` : '',
+            }
+          },
+        },
+      })],
     }),
 
     // Warranty block
@@ -279,9 +309,9 @@ export default defineType({
     select: {
       assetType: 'assetType',
       status:    'procurementStatus',
-      vendor:    'vendor.legalName_en',
+      items:     'comparisonItems',
     },
-    prepare({ assetType, status, vendor }: { assetType?: string; status?: string; vendor?: string }) {
+    prepare({ assetType, status, items }: { assetType?: string; status?: string; items?: any[] }) {
       const statusLabel: Record<string, string> = {
         created:              '📝 Created',
         processing:           '🔄 Processing',
@@ -292,9 +322,10 @@ export default defineType({
         delivered_partial:    '⚠️ Partial Delivery',
         delivered_rejected:   '❌ Rejected',
       }
+      const count = (items ?? []).length
       return {
         title:    assetType ?? '(Untitled)',
-        subtitle: `${statusLabel[status ?? ''] ?? ''}${vendor ? `  ·  ${vendor}` : ''}`,
+        subtitle: `${statusLabel[status ?? ''] ?? ''}${count ? `  ·  ${count} vendor(s)` : ''}`,
       }
     },
   },
