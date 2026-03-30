@@ -8,10 +8,22 @@ import { AddToPlaylistAction }  from './actions/addToPlaylistAction'
 import { MediaPublishAction }   from './actions/mediaPublishAction'
 import { DocumentOverview }     from './views/DocumentOverview'
 import { AILookupAction }      from './actions/AILookupAction'
+import { AIPartyLookupAction } from './actions/AIPartyLookupAction'
+import { MarkAsSignedAction }             from './actions/MarkAsSignedAction'
+import { CreatePartyFromContractAction } from './actions/CreatePartyFromContractAction'
+import { ImportFromContractAction }      from './actions/ImportFromContractAction'
 import { GenerateView }         from './views/GenerateView'
 import { ApprovalView }         from './views/ApprovalView'
+import { ActivityView }         from './views/ActivityView'
+import { InstallationOverview } from './views/InstallationOverview'
+import { PartyOverview }        from './views/PartyOverview'
+import { LeadOverview }              from './views/LeadOverview'
+import { SaleOpportunityOverview }  from './views/SaleOpportunityOverview'
 import { dataImportPlugin }     from './plugins/data-import'
 import { HowToTool }            from './tools/HowToTool'
+import { DashboardTool }        from './tools/DashboardTool'
+import { PartyMigrationTool }   from './tools/PartyMigrationTool'
+import { accessControlPlugin, accessStore } from './plugins/accessControl'
 
 const howToPlugin = definePlugin({
   name: 'how-to-guide',
@@ -20,6 +32,22 @@ const howToPlugin = definePlugin({
       name:      'how-to',
       title:     'How-To Guide',
       component: HowToTool,
+    },
+  ],
+})
+
+const dashboardPlugin = definePlugin({
+  name: 'ops-dashboard',
+  tools: [
+    {
+      name:      'dashboard',
+      title:     'Dashboard',
+      component: DashboardTool,
+    },
+    {
+      name:      'party-migration',
+      title:     'Party Migration',
+      component: PartyMigrationTool,
     },
   ],
 })
@@ -35,8 +63,8 @@ export default defineConfig({
   dataset:   DATASET,
 
   plugins: [
-    dataImportPlugin(),
-    howToPlugin(),
+    accessControlPlugin(),
+    dashboardPlugin(),
     structureTool({
       // Every document opens in read-only Overview by default.
       // The user clicks the "Edit" tab to make changes.
@@ -51,6 +79,7 @@ export default defineConfig({
             S.view.form().id('edit').title('Edit'),
             S.view.component(ApprovalView).id('approval').title('Approval'),
             S.view.component(GenerateView).id('generate').title('Generate'),
+            S.view.component(ActivityView).id('activity').title('Activity'),
           ])
         }
         if (schemaType === 'projectSite') {
@@ -58,6 +87,39 @@ export default defineConfig({
             S.view.component(DocumentOverview).id('overview').title('Overview'),
             S.view.form().id('edit').title('Edit'),
             S.view.component(ApprovalView).id('approval').title('Approval'),
+            S.view.component(ActivityView).id('activity').title('Activity'),
+          ])
+        }
+        if (schemaType === 'party') {
+          return S.document().views([
+            S.view.component(PartyOverview).id('overview').title('Overview'),
+            S.view.form().id('edit').title('Edit'),
+          ])
+        }
+        if (schemaType === 'lead') {
+          return S.document().views([
+            S.view.component(LeadOverview).id('overview').title('Overview'),
+            S.view.form().id('edit').title('Edit'),
+          ])
+        }
+        if (schemaType === 'saleOpportunity') {
+          return S.document().views([
+            S.view.component(SaleOpportunityOverview).id('overview').title('Overview'),
+            S.view.form().id('edit').title('Edit'),
+          ])
+        }
+        if (schemaType === 'installation') {
+          return S.document().views([
+            S.view.component(InstallationOverview).id('overview').title('Overview'),
+            S.view.form().id('edit').title('Edit'),
+            S.view.component(ActivityView).id('activity').title('Activity'),
+          ])
+        }
+        if (schemaType === 'project') {
+          return S.document().views([
+            S.view.component(DocumentOverview).id('overview').title('Overview'),
+            S.view.form().id('edit').title('Edit'),
+            S.view.component(ActivityView).id('activity').title('Activity'),
           ])
         }
         return S.document().views([
@@ -66,75 +128,116 @@ export default defineConfig({
         ])
       },
 
-      structure: S =>
-        S.list()
-          .title('Content')
-          .items([
+      structure: (S, context) => {
+        const email   = context.currentUser?.email?.toLowerCase() ?? ''
+        const isAdmin = context.currentUser?.roles?.some(r => r.name === 'administrator') ?? false
 
-            // ── Projects ──────────────────────────────────────────────────────
-            // "+" opens a blank project form. Clicking an existing project opens it directly.
-            S.documentTypeListItem('project').title('Projects'),
+        // `can(id)` — true if this user is allowed to see the section
+        const can = (id: string) =>
+          isAdmin || !accessStore.loaded || (accessStore.config[email] ?? []).includes(id)
 
-            S.divider(),
+        // Build each section conditionally; filter out falsy entries
+        const items = [
 
-            // ── Playlist (per-project) ─────────────────────────────────────────
-            // Level 1: list of all projects.
-            // Level 2: PlaylistItems filtered to that project, ordered by `order`.
-            // "+" inside a project's playlist pre-fills project via initial value template.
-            S.listItem()
-              .id('playlist')
-              .title('Playlist')
-              .child(
-                S.documentTypeList('project')
-                  .title('Playlist — Select Project')
-                  .child(projectId =>
-                    S.documentList()
-                      .title('Playlist Items')
-                      .filter('_type == "playlistItem" && project._ref == $projectId')
-                      .params({ projectId })
-                      .defaultOrdering([{ field: 'order', direction: 'asc' }])
-                  )
-              ),
+          // ── Digital Signage ────────────────────────────────────────────────
+          can('project')  && S.documentTypeListItem('project').title('Projects'),
+          can('playlist') && S.listItem()
+            .id('playlist')
+            .title('Playlist')
+            .child(
+              S.documentTypeList('project')
+                .title('Playlist — Select Project')
+                .child(projectId =>
+                  S.documentList()
+                    .title('Playlist Items')
+                    .filter('_type == "playlistItem" && project._ref == $projectId')
+                    .params({ projectId })
+                    .defaultOrdering([{ field: 'order', direction: 'asc' }])
+                )
+            ),
+          can('media') && S.documentTypeListItem('media').title('Media Library'),
 
-            // ── Media Library ──────────────────────────────────────────────────
-            S.documentTypeListItem('media').title('Media Library'),
+          (can('project') || can('playlist') || can('media')) &&
+          (can('offer') || can('provider') || can('categoryConfig') || can('projectSite') || can('contract')) &&
+          S.divider(),
 
-            S.divider(),
+          // ── Offers & Providers ─────────────────────────────────────────────
+          can('offer')    && S.documentTypeListItem('offer').title('Offers'),
+          can('provider') && S.documentTypeListItem('provider').title('Providers'),
 
-            // ── Providers + Offers (global) ────────────────────────────────────
-            S.documentTypeListItem('offer').title('Offers'),
-            S.documentTypeListItem('provider').title('Providers'),
+          (can('offer') || can('provider')) &&
+          (can('categoryConfig') || can('projectSite') || can('contract')) &&
+          S.divider(),
 
-            S.divider(),
+          // ── Config ─────────────────────────────────────────────────────────
+          can('categoryConfig') && S.listItem()
+            .title('Global Category Config')
+            .id('categoryConfig-global')
+            .child(
+              S.document()
+                .schemaType('categoryConfig')
+                .documentId('categoryConfig-global')
+                .title('Global Category Config')
+            ),
 
-            // ── Config (global singleton) ──────────────────────────────────────
-            S.listItem()
-              .title('Global Category Config')
-              .id('categoryConfig-global')
-              .child(
-                S.document()
-                  .schemaType('categoryConfig')
-                  .documentId('categoryConfig-global')
-                  .title('Global Category Config')
-              ),
+          (can('categoryConfig')) &&
+          (can('projectSite') || can('contract')) &&
+          S.divider(),
 
-            S.divider(),
+          // ── Contracts ──────────────────────────────────────────────────────
+          can('projectSite')        && S.documentTypeListItem('projectSite').title('Project Sites'),
+          can('contractType')       && S.documentTypeListItem('contractType').title('Process Setup'),
+          can('contract')           && S.documentTypeListItem('contract').title('Rent Space').child(
+            S.documentTypeList('contract').title('Rent Space').defaultOrdering([{ field: 'quotationNumber', direction: 'desc' }])
+          ),
+          can('installation')       && S.documentTypeListItem('installation').title('Install & Activate'),
+          can('procurement')        && S.documentTypeListItem('procurement').title('Procurement'),
+          can('payment')            && S.documentTypeListItem('payment').title('Payment'),
+          can('asset')              && S.documentTypeListItem('asset').title('Assets'),
+          can('contractManagement') && S.documentTypeListItem('contractManagement').title('Contract Management'),
 
-            // ── Contracts ─────────────────────────────────────────────────────
-            S.documentTypeListItem('projectSite').title('Project Sites'),
-            S.documentTypeListItem('contractType').title('Contract Types'),
-            S.documentTypeListItem('contract').title('Contracts'),
+          (can('projectSite') || can('contract') || can('contractManagement')) &&
+          (can('approvalPosition') || can('approvalRule') || can('approvalRequest')) &&
+          S.divider(),
 
-            S.divider(),
+          // ── CRM ────────────────────────────────────────────────────────────
+          (can('projectSite') || can('contract') || can('installation')) &&
+          (can('party')) &&
+          S.divider(),
 
-            // ── Approval ──────────────────────────────────────────────────────
-            S.documentTypeListItem('approvalPosition').title('Approver Positions'),
-            S.documentTypeListItem('approvalRule').title('Approval Rules'),
-            S.documentTypeListItem('approvalRequest').title('Approval Requests'),
+          can('party') && S.documentTypeListItem('party').title('Parties'),
+          can('lead')            && S.documentTypeListItem('lead').title('Leads'),
+          can('saleOpportunity') && S.documentTypeListItem('saleOpportunity').title('Sale Opportunities'),
 
-          ]),
+          (can('party')) &&
+          (can('approvalPosition') || can('approvalRule') || can('approvalRequest')) &&
+          S.divider(),
+
+          // ── Approval ───────────────────────────────────────────────────────
+          can('approvalPosition') && S.documentTypeListItem('approvalPosition').title('Approver Positions'),
+          can('approvalRule')     && S.documentTypeListItem('approvalRule').title('Approval Rules'),
+          can('approvalRequest')  && S.documentTypeListItem('approvalRequest').title('Approval Requests'),
+
+          // ── Admin only ─────────────────────────────────────────────────────
+          isAdmin && S.divider(),
+          isAdmin && S.listItem()
+            .title('🔐 Studio Access Control')
+            .id('studio-access-config')
+            .child(
+              S.document()
+                .schemaType('studioAccess')
+                .documentId('studio-access-config')
+                .title('Studio Access Control')
+            ),
+
+        ].filter(Boolean)
+
+        return S.list().title('Content').items(items as any)
+      },
     }),
 
+    dataImportPlugin(),
+    howToPlugin(),
     visionTool(),
   ],
 
@@ -143,7 +246,7 @@ export default defineConfig({
   // ── Initial value templates ───────────────────────────────────────────────
   // Used by the Playlist list-item in the structure above so that clicking "+"
   // pre-fills the project reference on the new playlist item.
-  templates: prev => [
+  templates: (prev: any[]) => [
     ...prev,
     {
       id:         'playlistItem-by-project',
@@ -179,11 +282,13 @@ export default defineConfig({
         return prev.filter(a => !['delete', 'duplicate'].includes((a as any).action))
       }
       if (ctx.schemaType === 'contract') {
-        // Generation is handled by the dedicated Generate tab — no extra actions needed.
-        return prev
+        return [...prev, CreatePartyFromContractAction]
       }
       if (ctx.schemaType === 'projectSite') {
         return [...prev, AILookupAction]
+      }
+      if (ctx.schemaType === 'party') {
+        return [...prev, AIPartyLookupAction, ImportFromContractAction]
       }
       return prev
     },
