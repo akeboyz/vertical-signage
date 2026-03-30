@@ -27,7 +27,7 @@ export function AutoSetupRefInput({ flag, value, onChange }: Props) {
   useEffect(() => {
     client
       .fetch<{ _id: string; name: string } | null>(
-        `*[_type == "contractType" && ${flag} == true && isActive == true][0]{ _id, name }`,
+        `*[_type == "contractType" && ${flag} == true && isActive == true] | order(_updatedAt desc)[0]{ _id, name }`,
       )
       .then(setup => {
         if (!setup) {

@@ -53,7 +53,7 @@ export function AssetSpecFieldsInput(props: StringInputProps) {
     setLoading(true)
     client
       .fetch<{ assetTypes?: AssetTypeDef[] }>(
-        `*[_id == $id][0]{
+        `coalesce(*[_id == "drafts." + $id][0], *[_id == $id][0]){
           assetTypes[]{
             key, name,
             specGroups[]{ groupName, specFields[]{ key, label, fieldType } }
