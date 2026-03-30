@@ -1,7 +1,8 @@
 import { defineField, defineType, defineArrayMember } from 'sanity'
-import { DynamicFieldsInput }    from '../components/DynamicFieldsInput'
-import { AssetTypeSelect }       from '../components/AssetTypeSelect'
-import { AssetSpecFieldsInput }  from '../components/AssetSpecFieldsInput'
+import { DynamicFieldsInput }         from '../components/DynamicFieldsInput'
+import { AssetTypeSelect }            from '../components/AssetTypeSelect'
+import { AssetSpecFieldsInput }       from '../components/AssetSpecFieldsInput'
+import { AutoProcurementSetupInput }  from '../components/AutoSetupRefInput'
 
 /**
  * Procurement — tracks the full lifecycle of purchasing a physical item.
@@ -55,12 +56,12 @@ export default defineType({
     // ── 1. Compare & Approve ──────────────────────────────────────────────────
 
     defineField({
-      group:       'spec',
-      name:        'contractType',
-      title:       'Process Setup',
-      type:        'reference',
-      to:          [{ type: 'contractType' }],
-      description: 'Select the Process Setup to load asset types and activity fields.',
+      group:      'spec',
+      name:       'contractType',
+      title:      'Process Setup',
+      type:       'reference',
+      to:         [{ type: 'contractType' }],
+      components: { input: AutoProcurementSetupInput },
     }),
 
     defineField({

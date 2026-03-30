@@ -78,6 +78,24 @@ export default defineType({
 
     defineField({
       group:        'identity',
+      name:         'useForProcurement',
+      title:        'Use for Procurement',
+      type:         'boolean',
+      description:  'Mark this as the Process Setup for Procurement documents. Only one setup should have this enabled.',
+      initialValue: false,
+    }),
+
+    defineField({
+      group:        'identity',
+      name:         'useForPayment',
+      title:        'Use for Payment',
+      type:         'boolean',
+      description:  'Mark this as the Process Setup for Payment documents. Only one setup should have this enabled.',
+      initialValue: false,
+    }),
+
+    defineField({
+      group:        'identity',
       name:         'useAssetConfig',
       title:        'Use Asset Config',
       type:         'boolean',

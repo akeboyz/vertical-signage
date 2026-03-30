@@ -1,5 +1,6 @@
 import { defineField, defineType, defineArrayMember } from 'sanity'
-import { DynamicFieldsInput } from '../components/DynamicFieldsInput'
+import { DynamicFieldsInput }      from '../components/DynamicFieldsInput'
+import { AutoPaymentSetupInput }   from '../components/AutoSetupRefInput'
 
 /**
  * Payment — tracks a payment against one or more Procurement documents.
@@ -310,12 +311,12 @@ export default defineType({
     // ── Activity Dynamic Fields (from Process Setup) ──────────────────────────
 
     defineField({
-      group:       'dynamic',
-      name:        'contractType',
-      title:       'Process Setup',
-      type:        'reference',
-      to:          [{ type: 'contractType' }],
-      description: 'Select the Process Setup to load its Activity Dynamic Fields.',
+      group:      'dynamic',
+      name:       'contractType',
+      title:      'Process Setup',
+      type:       'reference',
+      to:         [{ type: 'contractType' }],
+      components: { input: AutoPaymentSetupInput },
     }),
 
     defineField({
