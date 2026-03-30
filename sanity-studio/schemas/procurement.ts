@@ -1,5 +1,7 @@
 import { defineField, defineType, defineArrayMember } from 'sanity'
-import { DynamicFieldsInput } from '../components/DynamicFieldsInput'
+import { DynamicFieldsInput }    from '../components/DynamicFieldsInput'
+import { AssetTypeSelect }       from '../components/AssetTypeSelect'
+import { AssetSpecFieldsInput }  from '../components/AssetSpecFieldsInput'
 
 /**
  * Procurement — tracks the full lifecycle of purchasing a physical item.
@@ -54,6 +56,24 @@ export default defineType({
 
     defineField({
       group:       'spec',
+      name:        'contractType',
+      title:       'Process Setup',
+      type:        'reference',
+      to:          [{ type: 'contractType' }],
+      description: 'Select the Process Setup to load asset types and activity fields.',
+    }),
+
+    defineField({
+      group:       'spec',
+      name:        'assetType',
+      title:       'Asset Type',
+      type:        'string',
+      description: 'The type of asset being procured — drives spec fields below.',
+      components:  { input: AssetTypeSelect },
+    }),
+
+    defineField({
+      group:       'spec',
       name:        'title',
       title:       'Item Name',
       type:        'string',
@@ -102,23 +122,14 @@ export default defineType({
       ],
     }),
 
-    // Dynamic spec fields
+    // Dynamic spec fields — driven by selected Asset Type in Process Setup
     defineField({
       group:       'spec',
       name:        'specFields',
-      title:       'Device Spec Fields',
-      type:        'array',
-      description: 'Add any device specifications (e.g. Screen Size, Resolution, Panel Type, RAM, Storage).',
-      of: [defineArrayMember({
-        type:   'object',
-        name:   'specField',
-        title:  'Spec',
-        fields: [
-          defineField({ name: 'key',   title: 'Spec Name',  type: 'string', validation: Rule => Rule.required() }),
-          defineField({ name: 'value', title: 'Spec Value', type: 'string' }),
-        ],
-        preview: { select: { title: 'key', subtitle: 'value' } },
-      })],
+      title:       'Spec Fields',
+      type:        'string',
+      description: 'Spec fields are defined per asset type in Process Setup → Asset Config.',
+      components:  { input: AssetSpecFieldsInput },
     }),
 
     defineField({
@@ -254,15 +265,6 @@ export default defineType({
     }),
 
     // ── Activity Dynamic Fields (from Process Setup) ──────────────────────────
-
-    defineField({
-      group:       'dynamic',
-      name:        'contractType',
-      title:       'Process Setup',
-      type:        'reference',
-      to:          [{ type: 'contractType' }],
-      description: 'Select the Process Setup to load its Activity Dynamic Fields.',
-    }),
 
     defineField({
       group:       'dynamic',
