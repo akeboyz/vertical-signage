@@ -179,7 +179,7 @@ export function ComparisonItemsTable(props: ArrayInputProps) {
                 {/* ── Header row — vendor names ── */}
                 <thead>
                   <tr style={{ background: 'var(--card-muted-bg-color)' }}>
-                    <th style={th({ width: '22%', background: 'var(--card-muted-bg-color)' })}>
+                    <th style={th({ width: '15%', background: 'var(--card-muted-bg-color)' })}>
                       <Text size={0} weight="semibold" muted>Vendor</Text>
                     </th>
                     {rawItems.map(item => (
