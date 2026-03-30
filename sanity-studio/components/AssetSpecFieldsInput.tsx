@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Stack, Text, TextInput, Card, Spinner, Flex, Label, Button, Box } from '@sanity/ui'
 import { set, unset }              from 'sanity'
 import type { StringInputProps }   from 'sanity'
-import { useFormValue, useClient } from 'sanity'
+import { useClient, useFormValue } from 'sanity'
 
 interface SpecFieldDef {
   key:       string
@@ -24,14 +24,13 @@ interface AssetTypeDef {
 /**
  * AssetSpecFieldsInput
  *
- * Reads the selected assetType and the linked Process Setup's assetTypes[].
- * Finds the matching asset type and renders its specGroups as dynamic inputs
- * with section headers. Values are stored as a JSON string.
+ * Auto-discovers the Process Setup with useAssetConfig == true, finds the
+ * matching asset type, and renders its specGroups as dynamic inputs.
+ * Values are stored as a JSON string.
  */
 export function AssetSpecFieldsInput(props: StringInputProps) {
-  const client          = useClient({ apiVersion: '2024-01-01' })
-  const contractTypeRef = useFormValue(['contractType', '_ref']) as string | undefined
-  const assetType       = useFormValue(['assetType'])            as string | undefined
+  const client    = useClient({ apiVersion: '2024-01-01' })
+  const assetType = useFormValue(['assetType']) as string | undefined
 
   const [specGroups, setSpecGroups] = useState<SpecGroupDef[]>([])
   const [loading,    setLoading]    = useState(false)
@@ -47,19 +46,18 @@ export function AssetSpecFieldsInput(props: StringInputProps) {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch spec groups whenever Process Setup or asset type changes
+  // Fetch spec groups whenever asset type changes
   useEffect(() => {
-    if (!contractTypeRef || !assetType) { setSpecGroups([]); return }
+    if (!assetType) { setSpecGroups([]); return }
     setLoading(true)
     client
       .fetch<{ assetTypes?: AssetTypeDef[] }>(
-        `*[_id == $id][0]{
+        `*[_type == "contractType" && useAssetConfig == true && isActive == true][0]{
           assetTypes[]{
             key, name,
             specGroups[]{ groupName, specFields[]{ key, label, fieldType } }
           }
         }`,
-        { id: contractTypeRef },
       )
       .then(ct => {
         const found = (ct?.assetTypes ?? []).find(t => t.key === assetType)
@@ -67,7 +65,7 @@ export function AssetSpecFieldsInput(props: StringInputProps) {
       })
       .catch(() => setSpecGroups([]))
       .finally(() => setLoading(false))
-  }, [contractTypeRef, assetType, client])
+  }, [assetType, client])
 
   const handleChange = useCallback((key: string, value: string) => {
     setValues(prev => {
@@ -77,14 +75,6 @@ export function AssetSpecFieldsInput(props: StringInputProps) {
       return next
     })
   }, [props])
-
-  if (!contractTypeRef) {
-    return (
-      <Card padding={3} radius={2} border tone="caution">
-        <Text size={1}>Select a Process Setup above to see spec fields.</Text>
-      </Card>
-    )
-  }
 
   if (!assetType) {
     return (
@@ -106,7 +96,7 @@ export function AssetSpecFieldsInput(props: StringInputProps) {
   if (specGroups.length === 0) {
     return (
       <Card padding={3} radius={2} border tone="caution">
-        <Text size={1}>No spec groups defined for this asset type. Go to Process Setup → Asset Config to add groups and fields.</Text>
+        <Text size={1}>No spec groups defined for this asset type. Go to Process Setup → Asset Config → edit the asset type to add spec groups.</Text>
       </Card>
     )
   }

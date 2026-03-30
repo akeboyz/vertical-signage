@@ -2,7 +2,7 @@ import { useState, useEffect }      from 'react'
 import { Stack, Text, Card, Spinner, Flex } from '@sanity/ui'
 import { set, unset }               from 'sanity'
 import type { StringInputProps }    from 'sanity'
-import { useFormValue, useClient }  from 'sanity'
+import { useClient }                from 'sanity'
 
 interface AssetTypeDef {
   key:  string
@@ -12,37 +12,26 @@ interface AssetTypeDef {
 /**
  * AssetTypeSelect
  *
- * Reads assetTypes[] from the linked Process Setup document and renders
- * a dropdown so the user can pick which type this asset is.
- * Changing the selection clears the spec fields (they belong to the old type).
+ * Auto-discovers the Process Setup with useAssetConfig == true and reads
+ * its assetTypes[]. Independent of whichever Process Setup is linked to
+ * the current document (Procurement, Payment, etc.).
  */
 export function AssetTypeSelect(props: StringInputProps) {
-  const client           = useClient({ apiVersion: '2024-01-01' })
-  const contractTypeRef  = useFormValue(['contractType', '_ref']) as string | undefined
+  const client = useClient({ apiVersion: '2024-01-01' })
 
   const [assetTypes, setAssetTypes] = useState<AssetTypeDef[]>([])
-  const [loading,    setLoading]    = useState(false)
+  const [loading,    setLoading]    = useState(true)
 
   useEffect(() => {
-    if (!contractTypeRef) { setAssetTypes([]); return }
     setLoading(true)
     client
       .fetch<{ assetTypes?: AssetTypeDef[] }>(
-        `*[_id == $id][0]{ assetTypes[]{ key, name } }`,
-        { id: contractTypeRef },
+        `*[_type == "contractType" && useAssetConfig == true && isActive == true][0]{ assetTypes[]{ key, name } }`,
       )
       .then(ct => setAssetTypes(ct?.assetTypes ?? []))
       .catch(() => setAssetTypes([]))
       .finally(() => setLoading(false))
-  }, [contractTypeRef, client])
-
-  if (!contractTypeRef) {
-    return (
-      <Card padding={3} radius={2} border tone="caution">
-        <Text size={1}>Select a Process Setup above to see available asset types.</Text>
-      </Card>
-    )
-  }
+  }, [client])
 
   if (loading) {
     return (
@@ -56,7 +45,7 @@ export function AssetTypeSelect(props: StringInputProps) {
   if (assetTypes.length === 0) {
     return (
       <Card padding={3} radius={2} border tone="caution">
-        <Text size={1}>No asset types defined in this Process Setup. Go to Process Setup → Asset Config to add types.</Text>
+        <Text size={1}>No asset types found. Go to Process Setup → enable "Use Asset Config" → add asset types.</Text>
       </Card>
     )
   }
