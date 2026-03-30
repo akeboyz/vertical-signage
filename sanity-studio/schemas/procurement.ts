@@ -3,6 +3,7 @@ import { DynamicFieldsInput }         from '../components/DynamicFieldsInput'
 import { AssetTypeSelect }            from '../components/AssetTypeSelect'
 import { AssetSpecFieldsInput }       from '../components/AssetSpecFieldsInput'
 import { AutoProcurementSetupInput }  from '../components/AutoSetupRefInput'
+import { ComparisonItemsTable }       from '../components/ComparisonItemsTable'
 
 /**
  * Procurement — tracks the full lifecycle of purchasing a physical item.
@@ -100,6 +101,7 @@ export default defineType({
       title:       'Comparison Items',
       type:        'array',
       description: 'Add one entry per vendor being compared. Spec fields are driven by the selected Asset Type.',
+      components:  { input: ComparisonItemsTable },
       of: [defineArrayMember({
         type:   'object',
         name:   'comparisonItem',
