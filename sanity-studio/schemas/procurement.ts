@@ -74,29 +74,6 @@ export default defineType({
     }),
 
     defineField({
-      group:       'spec',
-      name:        'title',
-      title:       'Item Name',
-      type:        'string',
-      description: 'What is being procured (e.g. "55\" Commercial Display Screen").',
-      validation:  Rule => Rule.required(),
-    }),
-
-    defineField({
-      group: 'spec',
-      name:  'brand',
-      title: 'Brand',
-      type:  'string',
-    }),
-
-    defineField({
-      group: 'spec',
-      name:  'model',
-      title: 'Model',
-      type:  'string',
-    }),
-
-    defineField({
       group: 'spec',
       name:  'quantity',
       title: 'Quantity',
@@ -300,13 +277,11 @@ export default defineType({
 
   preview: {
     select: {
-      title:  'title',
-      brand:  'brand',
-      model:  'model',
-      status: 'procurementStatus',
-      vendor: 'vendor.legalName_en',
+      assetType: 'assetType',
+      status:    'procurementStatus',
+      vendor:    'vendor.legalName_en',
     },
-    prepare({ title, brand, model, status, vendor }) {
+    prepare({ assetType, status, vendor }: { assetType?: string; status?: string; vendor?: string }) {
       const statusLabel: Record<string, string> = {
         created:              '📝 Created',
         processing:           '🔄 Processing',
@@ -318,7 +293,7 @@ export default defineType({
         delivered_rejected:   '❌ Rejected',
       }
       return {
-        title:    title ?? [brand, model].filter(Boolean).join(' ') ?? '(Untitled)',
+        title:    assetType ?? '(Untitled)',
         subtitle: `${statusLabel[status ?? ''] ?? ''}${vendor ? `  ·  ${vendor}` : ''}`,
       }
     },
