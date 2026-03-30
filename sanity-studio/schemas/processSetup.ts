@@ -78,6 +78,15 @@ export default defineType({
 
     defineField({
       group:        'identity',
+      name:         'useAssetConfig',
+      title:        'Use Asset Config',
+      type:         'boolean',
+      description:  'Enable Asset Types and Spec Fields for processes that involve physical assets (e.g. Procurement, Installation). Disable for Rent Space or other non-asset processes.',
+      initialValue: false,
+    }),
+
+    defineField({
+      group:        'identity',
       name:         'usePaymentStatus',
       title:        'Show Payment Status on Procurement',
       type:         'boolean',
@@ -102,6 +111,7 @@ export default defineType({
       title:       'Asset Types',
       type:        'array',
       description: 'Define the types of assets used in this process (e.g. LED Screen, Media Player, Application). Each type has its own spec fields for comparison and tracking.',
+      hidden:      ({ document }) => !(document?.useAssetConfig as boolean),
       of: [defineArrayMember({
         type:  'object',
         name:  'assetType',
