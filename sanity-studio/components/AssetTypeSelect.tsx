@@ -28,7 +28,7 @@ export function AssetTypeSelect(props: StringInputProps) {
     setLoading(true)
     client
       .fetch<{ assetTypes?: AssetTypeDef[] }>(
-        `coalesce(*[_id == "drafts." + $id][0], *[_id == $id][0]){ assetTypes[]{ key, name } }`,
+        `*[_id == $id][0]{ assetTypes[]{ key, name } }`,
         { id: contractTypeRef },
       )
       .then(ct => setAssetTypes(ct?.assetTypes ?? []))

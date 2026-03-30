@@ -135,7 +135,7 @@ export function DynamicFieldsInput(props: StringInputProps) {
     setLoading(true)
     client
       .fetch<{ fieldDefinitions?: FieldDef[]; projectSiteFields?: string[]; partyFields?: string[] }>(
-        `coalesce(*[_id == "drafts." + $id][0], *[_id == $id][0]){ fieldDefinitions, projectSiteFields, partyFields }`,
+        `*[_id == $id][0]{ fieldDefinitions, projectSiteFields, partyFields }`,
         { id: contractTypeRef },
       )
       .then(async ct => {
