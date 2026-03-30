@@ -28,6 +28,7 @@ interface FieldDef {
   translateTargetLang?:     string
   formula?:                 Formula
   retrieveFromProjectSite?: boolean
+  retrieveFromPsKey?:       string   // override: which PS field key to pull from
   _section?:                string   // internal: section header label
 }
 
@@ -250,18 +251,20 @@ export function DynamicFieldsInput(props: StringInputProps) {
     }
   }, [values, handleChange])
 
-  const handleRetrieve = useCallback(async (key: string) => {
+  const handleRetrieve = useCallback(async (key: string, psKey?: string) => {
     if (!projectSiteRef) return
     setRetrieving(key)
     setRetrieveErr(prev => ({ ...prev, [key]: '' }))
     try {
       const doc = await client.fetch<Record<string, any>>(`*[_id == $id][0]`, { id: projectSiteRef })
       if (!doc) { setRetrieveErr(prev => ({ ...prev, [key]: 'Project site not found.' })); return }
-      const val = doc[key]
+      // Use the mapped PS key if provided, otherwise fall back to the field's own key
+      const lookupKey = psKey || key
+      const val = doc[lookupKey]
       if (val !== undefined && val !== null) {
         setSuggestions(prev => ({ ...prev, [key]: String(val) }))
       } else {
-        setRetrieveErr(prev => ({ ...prev, [key]: `Field "${key}" has no value on the linked project site.` }))
+        setRetrieveErr(prev => ({ ...prev, [key]: `Field "${lookupKey}" has no value on the linked project site.` }))
       }
     } catch (err: any) {
       setRetrieveErr(prev => ({ ...prev, [key]: err?.message ?? 'Retrieve failed.' }))
@@ -560,7 +563,7 @@ export function DynamicFieldsInput(props: StringInputProps) {
                       padding={2}
                       disabled={!projectSiteRef || isRetrieving}
                       title={!projectSiteRef ? 'Link a Project Site on this document first' : `Retrieve "${f.label}" from the linked project site`}
-                      onClick={() => handleRetrieve(f.key)}
+                      onClick={() => handleRetrieve(f.key, f.retrieveFromPsKey)}
                     />
                   )}
                 </Flex>

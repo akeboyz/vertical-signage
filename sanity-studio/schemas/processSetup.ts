@@ -588,6 +588,13 @@ export default defineType({
               description:  'Show a "Retrieve from Project Site" button on this field.',
               initialValue: false,
             }),
+            defineField({
+              name:        'retrieveFromPsKey',
+              title:       'Project Site Field Key',
+              type:        'string',
+              description: 'Which project site field to pull the value from. Only needed if the project site field key differs from this field\'s key. e.g. set "address" here if this field is "addressEn" but maps to the project site\'s address field.',
+              hidden:      ({ parent }: any) => !parent?.retrieveFromProjectSite,
+            }),
           ],
           preview: {
             select: { title: 'label', key: 'key', type: 'fieldType', tf: 'translateFrom', tl: 'translateTargetLang', fb: 'formula.baseField', fa: 'formula.amountField', fu: 'formula.unit', rfps: 'retrieveFromProjectSite', isMaterialTerm: 'isMaterialTerm' },
