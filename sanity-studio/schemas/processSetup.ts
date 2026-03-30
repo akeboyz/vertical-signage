@@ -22,6 +22,7 @@ export default defineType({
 
   groups: [
     { name: 'identity', title: 'Identity'       },
+    { name: 'asset',    title: 'Asset Config'   },
     { name: 'workflow', title: 'Pipeline Steps' },
     { name: 'contract', title: 'Contract Phase' },
   ],
@@ -91,6 +92,94 @@ export default defineType({
       type:         'boolean',
       description:  'Show a Procurement Status summary field on Payment documents using this setup.',
       initialValue: true,
+    }),
+
+    // ── Asset Config ─────────────────────────────────────────────────────────────
+
+    defineField({
+      group:       'asset',
+      name:        'assetTypes',
+      title:       'Asset Types',
+      type:        'array',
+      description: 'Define the types of assets used in this process (e.g. LED Screen, Media Player, Application). Each type has its own spec fields for comparison and tracking.',
+      of: [defineArrayMember({
+        type:  'object',
+        name:  'assetType',
+        title: 'Asset Type',
+        fields: [
+          defineField({
+            name:        'key',
+            title:       'Key',
+            type:        'string',
+            description: 'Machine-readable identifier, no spaces. e.g. "led_screen", "media_player", "application".',
+            validation:  Rule => Rule.required(),
+          }),
+          defineField({
+            name:        'name',
+            title:       'Display Name',
+            type:        'string',
+            description: 'Human-readable name shown in Asset and Procurement forms. e.g. "LED Screen 55\\"", "Media Player".',
+            validation:  Rule => Rule.required(),
+          }),
+          defineField({
+            name:        'specFields',
+            title:       'Spec Fields',
+            type:        'array',
+            description: 'Define the specification fields for this asset type. These appear on Asset documents and Procurement comparison items.',
+            of: [defineArrayMember({
+              type:  'object',
+              name:  'specField',
+              title: 'Spec Field',
+              fields: [
+                defineField({
+                  name:        'key',
+                  title:       'Key',
+                  type:        'string',
+                  description: 'Machine-readable identifier. e.g. "resolution", "brightness", "platform".',
+                  validation:  Rule => Rule.required(),
+                }),
+                defineField({
+                  name:        'label',
+                  title:       'Label',
+                  type:        'string',
+                  description: 'Display name shown on Asset / Procurement forms. e.g. "Resolution", "Brightness (nits)".',
+                  validation:  Rule => Rule.required(),
+                }),
+                defineField({
+                  name:         'fieldType',
+                  title:        'Field Type',
+                  type:         'string',
+                  initialValue: 'string',
+                  options: {
+                    list: [
+                      { title: 'Short text', value: 'string' },
+                      { title: 'Number',     value: 'number' },
+                      { title: 'Long text',  value: 'text'   },
+                      { title: 'Yes / No',   value: 'yes_no' },
+                    ],
+                  },
+                  validation: Rule => Rule.required(),
+                }),
+              ],
+              preview: {
+                select: { title: 'label', subtitle: 'fieldType', key: 'key' },
+                prepare({ title, subtitle, key }: { title?: string; subtitle?: string; key?: string }) {
+                  return { title: title ?? '—', subtitle: `{{${key ?? '?'}}} · ${subtitle ?? 'string'}` }
+                },
+              },
+            })],
+          }),
+        ],
+        preview: {
+          select: { name: 'name', key: 'key', specs: 'specFields' },
+          prepare({ name, key, specs }: { name?: string; key?: string; specs?: any[] }) {
+            return {
+              title:    name ?? key ?? '—',
+              subtitle: `key: ${key ?? '?'} · ${(specs ?? []).length} spec field(s)`,
+            }
+          },
+        },
+      })],
     }),
 
     // ── Pipeline Steps ───────────────────────────────────────────────────────────
