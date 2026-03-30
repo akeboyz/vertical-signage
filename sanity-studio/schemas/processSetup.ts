@@ -463,7 +463,7 @@ export default defineType({
           { title: 'Legal Name (English)',     value: 'legalName_en'   },
           { title: 'Tax ID',                   value: 'taxId'          },
           { title: 'Company Registration No.', value: 'registrationNo' },
-          { title: 'Juristic Manager',         value: 'juristicManager'},
+          { title: 'Contact Person / Manager in-charge', value: 'juristicManager'},
           { title: 'First Name',               value: 'firstName'      },
           { title: 'Last Name',                value: 'lastName'        },
           { title: 'National ID',              value: 'nationalId'     },
