@@ -175,27 +175,12 @@ export default defineType({
       hidden: ({ document }) => !document?.warrantyOffer,
     }),
 
-    // Approval
-    defineField({
-      group:        'spec',
-      name:         'approvalStatus',
-      title:        'Spec Approval Status',
-      type:         'string',
-      initialValue: 'pending',
-      options: {
-        list: [
-          { title: '⏳ Pending',  value: 'pending'  },
-          { title: '✅ Approved', value: 'approved' },
-          { title: '❌ Rejected', value: 'rejected' },
-        ],
-      },
-    }),
-
-    defineField({ group: 'spec', name: 'approvedBy',   title: 'Approved By',   type: 'string' }),
-    defineField({ group: 'spec', name: 'approvedDate',  title: 'Approved Date', type: 'date'   }),
-    defineField({ group: 'spec', name: 'rejectionReason', title: 'Rejection Reason', type: 'text', rows: 2,
-      hidden: ({ document }) => (document?.approvalStatus as string) !== 'rejected',
-    }),
+    // ── Approval (managed by the Approval tab — do not edit manually) ─────────
+    defineField({ name: 'approvalStatus',      title: 'Approval Status',      type: 'string',   hidden: true }),
+    defineField({ name: 'notificationEmail',   title: 'Notification Email',   type: 'string',   hidden: true }),
+    defineField({ name: 'approvedAt',          title: 'Approved At',          type: 'datetime', hidden: true }),
+    defineField({ name: 'approvalResetReason', title: 'Approval Reset Reason',type: 'string',   hidden: true }),
+    defineField({ name: 'lastApprovalSnapshot',title: 'Last Approval Snapshot',type: 'string',  hidden: true }),
 
     // ── 2. Ordering ───────────────────────────────────────────────────────────
 

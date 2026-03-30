@@ -66,6 +66,7 @@ export function DocumentTypeSelect(props: StringInputProps) {
           <option value="quotation">Quotation</option>
           <option value="contract">Any Contract (catch-all)</option>
           <option value="projectSite">Project Site</option>
+          <option value="procurement">Procurement</option>
           <option value="both">Both (Quotation + Any Contract)</option>
         </optgroup>
 

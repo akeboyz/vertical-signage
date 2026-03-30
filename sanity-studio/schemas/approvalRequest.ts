@@ -11,7 +11,7 @@ export default defineType({
   type:  'document',
 
   fields: [
-    defineField({ name: 'contract',     title: 'Contract',      type: 'reference', to: [{ type: 'contract' }], readOnly: true }),
+    defineField({ name: 'contract',     title: 'Contract',      type: 'reference', to: [{ type: 'contract' }, { type: 'procurement' }], readOnly: true }),
     defineField({ name: 'documentType', title: 'Document Type', type: 'string',    readOnly: true }), // quotation | contract
     defineField({ name: 'stage',        title: 'Stage',         type: 'number',    readOnly: true }),
     defineField({ name: 'totalStages',  title: 'Total Stages',  type: 'number',    readOnly: true }),

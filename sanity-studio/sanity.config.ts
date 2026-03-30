@@ -108,6 +108,14 @@ export default defineConfig({
             S.view.form().id('edit').title('Edit'),
           ])
         }
+        if (schemaType === 'procurement') {
+          return S.document().views([
+            S.view.component(DocumentOverview).id('overview').title('Overview'),
+            S.view.form().id('edit').title('Edit'),
+            S.view.component(ApprovalView).id('approval').title('Approval'),
+            S.view.component(ActivityView).id('activity').title('Activity'),
+          ])
+        }
         if (schemaType === 'installation') {
           return S.document().views([
             S.view.component(InstallationOverview).id('overview').title('Overview'),
