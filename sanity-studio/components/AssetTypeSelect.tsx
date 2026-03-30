@@ -31,6 +31,7 @@ export function AssetTypeSelect(props: StringInputProps) {
         `*[_id == $id][0]{ assetTypes[]{ key, name } }`,
         { id: contractTypeRef },
       )
+
       .then(ct => setAssetTypes(ct?.assetTypes ?? []))
       .catch(() => setAssetTypes([]))
       .finally(() => setLoading(false))

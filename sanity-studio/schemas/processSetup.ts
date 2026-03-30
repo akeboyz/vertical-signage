@@ -132,60 +132,90 @@ export default defineType({
             validation:  Rule => Rule.required(),
           }),
           defineField({
-            name:        'specFields',
-            title:       'Spec Fields',
+            name:        'specGroups',
+            title:       'Spec Groups',
             type:        'array',
-            description: 'Define the specification fields for this asset type. These appear on Asset documents and Procurement comparison items.',
+            description: 'Group spec fields into sections (e.g. Basic Info, Display Spec, Hardware). Each group has a name and its own list of fields.',
             of: [defineArrayMember({
               type:  'object',
-              name:  'specField',
-              title: 'Spec Field',
+              name:  'specGroup',
+              title: 'Spec Group',
               fields: [
                 defineField({
-                  name:        'key',
-                  title:       'Key',
+                  name:        'groupName',
+                  title:       'Group Name',
                   type:        'string',
-                  description: 'Machine-readable identifier. e.g. "resolution", "brightness", "platform".',
+                  description: 'Section header shown in Asset / Procurement forms. e.g. "Basic Info", "Display Spec", "Network".',
                   validation:  Rule => Rule.required(),
                 }),
                 defineField({
-                  name:        'label',
-                  title:       'Label',
-                  type:        'string',
-                  description: 'Display name shown on Asset / Procurement forms. e.g. "Resolution", "Brightness (nits)".',
-                  validation:  Rule => Rule.required(),
-                }),
-                defineField({
-                  name:         'fieldType',
-                  title:        'Field Type',
-                  type:         'string',
-                  initialValue: 'string',
-                  options: {
-                    list: [
-                      { title: 'Short text', value: 'string' },
-                      { title: 'Number',     value: 'number' },
-                      { title: 'Long text',  value: 'text'   },
-                      { title: 'Yes / No',   value: 'yes_no' },
+                  name:        'specFields',
+                  title:       'Spec Fields',
+                  type:        'array',
+                  description: 'Fields in this group.',
+                  of: [defineArrayMember({
+                    type:  'object',
+                    name:  'specField',
+                    title: 'Spec Field',
+                    fields: [
+                      defineField({
+                        name:        'key',
+                        title:       'Key',
+                        type:        'string',
+                        description: 'Machine-readable identifier. e.g. "resolution", "brightness", "sim_provider".',
+                        validation:  Rule => Rule.required(),
+                      }),
+                      defineField({
+                        name:        'label',
+                        title:       'Label',
+                        type:        'string',
+                        description: 'Display name shown on Asset / Procurement forms. e.g. "Resolution", "Brightness (nits)".',
+                        validation:  Rule => Rule.required(),
+                      }),
+                      defineField({
+                        name:         'fieldType',
+                        title:        'Field Type',
+                        type:         'string',
+                        initialValue: 'string',
+                        options: {
+                          list: [
+                            { title: 'Short text', value: 'string' },
+                            { title: 'Number',     value: 'number' },
+                            { title: 'Long text',  value: 'text'   },
+                            { title: 'Yes / No',   value: 'yes_no' },
+                          ],
+                        },
+                        validation: Rule => Rule.required(),
+                      }),
                     ],
-                  },
-                  validation: Rule => Rule.required(),
+                    preview: {
+                      select: { title: 'label', subtitle: 'fieldType', key: 'key' },
+                      prepare({ title, subtitle, key }: { title?: string; subtitle?: string; key?: string }) {
+                        return { title: title ?? '—', subtitle: `{{${key ?? '?'}}} · ${subtitle ?? 'string'}` }
+                      },
+                    },
+                  })],
                 }),
               ],
               preview: {
-                select: { title: 'label', subtitle: 'fieldType', key: 'key' },
-                prepare({ title, subtitle, key }: { title?: string; subtitle?: string; key?: string }) {
-                  return { title: title ?? '—', subtitle: `{{${key ?? '?'}}} · ${subtitle ?? 'string'}` }
+                select: { groupName: 'groupName', fields: 'specFields' },
+                prepare({ groupName, fields }: { groupName?: string; fields?: any[] }) {
+                  return {
+                    title:    groupName ?? '—',
+                    subtitle: `${(fields ?? []).length} field(s)`,
+                  }
                 },
               },
             })],
           }),
         ],
         preview: {
-          select: { name: 'name', key: 'key', specs: 'specFields' },
-          prepare({ name, key, specs }: { name?: string; key?: string; specs?: any[] }) {
+          select: { name: 'name', key: 'key', groups: 'specGroups' },
+          prepare({ name, key, groups }: { name?: string; key?: string; groups?: any[] }) {
+            const fieldCount = (groups ?? []).reduce((sum: number, g: any) => sum + (g.specFields?.length ?? 0), 0)
             return {
               title:    name ?? key ?? '—',
-              subtitle: `key: ${key ?? '?'} · ${(specs ?? []).length} spec field(s)`,
+              subtitle: `key: ${key ?? '?'} · ${(groups ?? []).length} group(s) · ${fieldCount} field(s)`,
             }
           },
         },
