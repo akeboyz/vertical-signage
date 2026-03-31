@@ -4,6 +4,9 @@ import { AssetTypeSelect }            from '../components/AssetTypeSelect'
 import { AssetSpecFieldsInput }       from '../components/AssetSpecFieldsInput'
 import { AutoProcurementSetupInput }  from '../components/AutoSetupRefInput'
 import { ComparisonItemsTable }       from '../components/ComparisonItemsTable'
+import { createAutoNumberInput }      from '../components/AutoNumberInput'
+
+const ProcurementNumberInput = createAutoNumberInput('procurement')
 
 /**
  * Procurement — tracks the full lifecycle of purchasing a physical item.
@@ -55,6 +58,15 @@ export default defineType({
     }),
 
     // ── 1. Compare & Approve ──────────────────────────────────────────────────
+
+    defineField({
+      group:      'spec',
+      name:       'procurementNumber',
+      title:      'Procurement Number',
+      type:       'string',
+      description: 'Auto-generated order number. Click Generate after linking a Process Setup.',
+      components: { input: ProcurementNumberInput },
+    }),
 
     defineField({
       group:      'spec',
@@ -294,11 +306,12 @@ export default defineType({
 
   preview: {
     select: {
+      number:    'procurementNumber',
       assetType: 'assetType',
       status:    'procurementStatus',
       items:     'comparisonItems',
     },
-    prepare({ assetType, status, items }: { assetType?: string; status?: string; items?: any[] }) {
+    prepare({ number, assetType, status, items }: { number?: string; assetType?: string; status?: string; items?: any[] }) {
       const statusLabel: Record<string, string> = {
         created:              '📝 Created',
         processing:           '🔄 Processing',
@@ -311,7 +324,7 @@ export default defineType({
       }
       const count = (items ?? []).length
       return {
-        title:    assetType ?? '(Untitled)',
+        title:    number ? `${number}${assetType ? ` — ${assetType}` : ''}` : (assetType ?? '(Untitled)'),
         subtitle: `${statusLabel[status ?? ''] ?? ''}${count ? `  ·  ${count} vendor(s)` : ''}`,
       }
     },

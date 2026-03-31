@@ -16,7 +16,7 @@ const API_BASE =
  * Usage in schema:
  *   components: { input: createAutoNumberInput('contract') }
  */
-export function createAutoNumberInput(docType: 'contract' | 'quotation') {
+export function createAutoNumberInput(docType: string) {
   function AutoNumberInput(props: StringInputProps) {
     const [generating, setGenerating] = useState(false)
     const [checking,   setChecking]   = useState(false)
@@ -70,7 +70,12 @@ export function createAutoNumberInput(docType: 'contract' | 'quotation') {
         const res  = await fetch(`${API_BASE}/api/next-doc-number`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ docType, contractTypeId: contractTypeRef }),
+          body:    JSON.stringify({
+            docType,
+            contractTypeId: contractTypeRef,
+            currentNumber:  currentValue || undefined,
+            currentDocId:   currentDocId?.replace(/^drafts\./, ''),
+          }),
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
