@@ -74,10 +74,10 @@ export default defineType({
         }),
     }),
     defineField({
-      name: 'imageFile',
-      title: 'Image File (JPG / PNG)',
-      type: 'image',
-      options: { accept: 'image/*', hotspot: true },
+      name: 'imageFiles',
+      title: 'Image Files (JPG / PNG) — up to 6',
+      type: 'array',
+      of: [{ type: 'image', options: { accept: 'image/*', hotspot: true } }],
       hidden: ({ document }) => {
         const doc = document as any
         return doc?.kind !== 'promo' || doc?.type !== 'image'
@@ -85,26 +85,39 @@ export default defineType({
       validation: Rule =>
         Rule.custom((value, context) => {
           const doc = context.document as any
-          if (doc?.kind === 'promo' && doc?.type === 'image' && !value)
-            return 'Image file is required when Type is Image'
+          if (doc?.kind === 'promo' && doc?.type === 'image') {
+            const arr = value as any[] | undefined
+            if (!arr?.length) return 'Add at least one image'
+            if (arr.length > 6) return 'Maximum 6 images allowed'
+          }
           return true
         }),
+      description: 'Upload 1–6 images. Multiple images play as a slideshow, each shown for the duration below.',
     }),
 
     // ── Default duration (promo image only) ──────────────────────────────────
     // Resolution: playlistItem.displayDuration ?? media.defaultImageDuration ?? 10
-    // Videos use intrinsic duration.
+    // Each image in a slideshow is shown for this duration.
     defineField({
       name: 'defaultImageDuration',
-      title: 'Default Display Duration (seconds)',
+      title: 'Duration per Image (seconds)',
       type: 'number',
       initialValue: 10,
       hidden: ({ document }) => {
         const doc = document as any
         return doc?.kind !== 'promo' || doc?.type !== 'image'
       },
-      description: 'Override per slot via PlaylistItem.displayDuration.',
+      description: 'How long each image is shown. Override per playlist slot via PlaylistItem.displayDuration.',
       validation: Rule => Rule.min(1).max(300),
+    }),
+
+    // ── Legacy single image (hidden — kept for backward compatibility) ─────────
+    defineField({
+      name: 'imageFile',
+      title: 'Image File (legacy)',
+      type: 'image',
+      options: { accept: 'image/*', hotspot: true },
+      hidden: true,
     }),
 
     // ── Offer link (promo only; optional for notices) ─────────────────────────
@@ -214,6 +227,19 @@ export default defineType({
         'Global scope only. All active projects are included by default — ' +
         'uncheck any project here to exclude it from the auto-add.',
       components: { input: ExcludedProjectsInput },
+    }),
+
+    // ── Notice sub-categories ─────────────────────────────────────────────────
+    // Notices bypass the Offer schema, so subCategories must live here directly.
+    // Values must match subcategory IDs defined in Category Config for buildingUpdates.
+    defineField({
+      name: 'subCategories',
+      title: 'Sub-categories',
+      type: 'array',
+      of: [{ type: 'string' }],
+      options: { layout: 'tags' },
+      hidden: ({ document }) => (document as any)?.kind !== 'notice',
+      description: 'Tag this notice with subcategory IDs from Category Config (e.g. "regulations", "events", "maintenance").',
     }),
 
     // ── Extra metadata ────────────────────────────────────────────────────────
