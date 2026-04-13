@@ -1,12 +1,19 @@
 import { defineField, defineType, defineArrayMember } from 'sanity'
-import { DynamicFieldsInput }         from '../components/DynamicFieldsInput'
+import { DynamicFieldsInput }                        from '../components/DynamicFieldsInput'
+import { AutoProcurementPaymentStatusInput }         from '../components/AutoProcurementPaymentStatusInput'
+import { LinkedPaymentsDisplay }                    from '../components/LinkedPaymentsDisplay'
 import { AssetTypeSelect }            from '../components/AssetTypeSelect'
-import { AssetSpecFieldsInput }       from '../components/AssetSpecFieldsInput'
+import { ProcurementSpecFieldsInput } from '../components/ProcurementSpecFieldsInput'
 import { AutoProcurementSetupInput }  from '../components/AutoSetupRefInput'
-import { ComparisonItemsTable }       from '../components/ComparisonItemsTable'
+import { AutoProcurementStatusInput }    from '../components/AutoProcurementStatusInput'
+import { ComparisonItemsTable }          from '../components/ComparisonItemsTable'
+import { ApprovedOrderSummary }       from '../components/ApprovedOrderSummary'
 import { createAutoNumberInput }      from '../components/AutoNumberInput'
+import { CopyFromProcurementInput }         from '../components/CopyFromProcurementInput'
+import { ProcessSetupDescriptionBanner }   from '../components/ProcessSetupDescriptionBanner'
+import { ApprovalLockedBanner }            from '../components/ApprovalLockedBanner'
 
-const ProcurementNumberInput = createAutoNumberInput('procurement')
+const ProcurementNumberInput = createAutoNumberInput('purchaseOrder')
 
 /**
  * Procurement — tracks the full lifecycle of purchasing a physical item.
@@ -24,48 +31,67 @@ export default defineType({
   type:  'document',
 
   groups: [
-    { name: 'spec',     title: '1. Compare & Approve', default: true },
-    { name: 'ordering', title: '2. Ordering'                         },
-    { name: 'delivery', title: '3. Delivery'                         },
-    { name: 'payment',  title: '4. Payment'                          },
-    { name: 'dynamic',  title: 'Activity Fields'                     },
-    { name: 'custom',   title: 'Custom Fields'                       },
+    { name: 'spec',      title: '1. Compare & Approve', default: true },
+    { name: 'ordering',  title: '2. Ordering'                         },
+    { name: 'delivery',  title: '3. Delivery'                         },
+    { name: 'payment',   title: '4. Payment'                          },
+    { name: 'generated', title: 'Generated Documents'                 },
+    { name: 'dynamic',   title: 'Activity Fields'                     },
+    { name: 'custom',    title: 'Custom Fields'                       },
   ],
 
   fields: [
 
+    // ── Approval locked banner (shown when approved) ──────────────────────────
+    defineField({
+      group:      'spec',
+      name:       'approvalLockedBanner',
+      title:      'Approval Lock',
+      type:       'string',
+      readOnly:   true,
+      components: { input: ApprovalLockedBanner },
+    }),
+
+    // ── Process Setup description banner (top of form) ────────────────────────
+    defineField({
+      group:      'spec',
+      name:       'setupDescriptionBanner',
+      title:      'Process Setup Guide',
+      type:       'string',
+      hidden:     ({ document }) => !(document?.contractType as any)?._ref,
+      components: { input: ProcessSetupDescriptionBanner },
+    }),
+
     // ── Status (top-level, always visible) ────────────────────────────────────
 
     defineField({
-      name:         'procurementStatus',
-      title:        'Procurement Status',
-      type:         'string',
-      initialValue: 'created',
-      options: {
-        list: [
-          { title: '📝 Created',           value: 'created'    },
-          { title: '🔄 Processing',        value: 'processing' },
-          { title: '✅ Approved',          value: 'approved'   },
-          { title: '📦 Order Placed',      value: 'order_placed'   },
-          { title: '🚚 Order Shipped',     value: 'order_shipped'  },
-          { title: '✅ Delivered — Accepted', value: 'delivered_accepted' },
-          { title: '⚠️ Delivered — Partial',  value: 'delivered_partial'  },
-          { title: '❌ Delivered — Rejected', value: 'delivered_rejected' },
-        ],
-        layout: 'radio',
-      },
-      validation: Rule => Rule.required(),
+      name:       'procurementStatus',
+      title:      'Procurement Status',
+      type:       'string',
+      components: { input: AutoProcurementStatusInput },
     }),
 
     // ── 1. Compare & Approve ──────────────────────────────────────────────────
 
     defineField({
       group:      'spec',
-      name:       'procurementNumber',
-      title:      'Procurement Number',
+      name:       'purchaseOrderNumber',
+      title:      'Purchase Order Number',
       type:       'string',
-      description: 'Auto-generated order number. Click Generate after linking a Process Setup.',
+      readOnly:   ({ document }) => (document?.approvalStatus as string) === 'approved',
+      description: 'Auto-generated purchase order number. Click Generate after linking a Process Setup.',
       components: { input: ProcurementNumberInput },
+    }),
+
+    defineField({
+      group:       'spec',
+      name:        'copyFromProcurement',
+      title:       'Copy from Previous PO',
+      type:        'reference',
+      to:          [{ type: 'procurement' }],
+      description: 'Optional: select a past procurement to copy its vendors, specs, and pricing into this new order.',
+      components:  { input: CopyFromProcurementInput },
+      options:     { filter: 'receivedStatus == "accepted" || approvalStatus == "approved"' },
     }),
 
     defineField({
@@ -74,6 +100,8 @@ export default defineType({
       title:      'Process Setup',
       type:       'reference',
       to:         [{ type: 'contractType' }],
+      readOnly:   ({ document }) => (document?.approvalStatus as string) === 'approved',
+      validation: Rule => Rule.required(),
       components: { input: AutoProcurementSetupInput },
     }),
 
@@ -82,24 +110,28 @@ export default defineType({
       name:        'assetType',
       title:       'Asset Type',
       type:        'string',
+      readOnly:    ({ document }) => (document?.approvalStatus as string) === 'approved',
       description: 'The type of asset being procured — drives spec fields below.',
+      validation:  Rule => Rule.required(),
       components:  { input: AssetTypeSelect },
     }),
 
     defineField({
-      group: 'spec',
-      name:  'quantity',
-      title: 'Quantity Required',
-      type:  'number',
-      validation: Rule => Rule.min(1),
+      group:    'spec',
+      name:     'quantity',
+      title:    'Quantity Required',
+      type:     'number',
+      readOnly: ({ document }) => (document?.approvalStatus as string) === 'approved',
+      validation: Rule => Rule.required().min(1),
     }),
 
     defineField({
-      group:  'spec',
-      name:   'budgetRange',
-      title:  'Budget Range',
-      type:   'object',
-      options: { collapsible: false },
+      group:    'spec',
+      name:     'budgetRange',
+      title:    'Budget Range',
+      type:     'object',
+      readOnly: ({ document }) => (document?.approvalStatus as string) === 'approved',
+      options:  { collapsible: false },
       fields: [
         defineField({ name: 'min', title: 'Min (THB)', type: 'number' }),
         defineField({ name: 'max', title: 'Max (THB)', type: 'number' }),
@@ -112,7 +144,9 @@ export default defineType({
       name:        'comparisonItems',
       title:       'Comparison Items',
       type:        'array',
+      readOnly:    ({ document }) => (document?.approvalStatus as string) === 'approved',
       description: 'Add one entry per vendor being compared. Spec fields are driven by the selected Asset Type.',
+      validation:  Rule => Rule.required().min(1).error('At least one comparison item is required before submitting for approval.'),
       components:  { input: ComparisonItemsTable },
       of: [defineArrayMember({
         type:   'object',
@@ -136,7 +170,7 @@ export default defineType({
             title:      'Spec Values',
             type:       'string',
             description: 'Spec fields from the selected Asset Type.',
-            components: { input: AssetSpecFieldsInput },
+            components: { input: ProcurementSpecFieldsInput },
           }),
           defineField({
             name:         'selected',
@@ -196,9 +230,29 @@ export default defineType({
     defineField({ name: 'approvalResetReason', title: 'Approval Reset Reason',type: 'string',   hidden: true }),
     defineField({ name: 'lastApprovalSnapshot',title: 'Last Approval Snapshot',type: 'string',  hidden: true }),
 
+    // ── Generated Documents (managed by the Generate tab — do not edit manually) ──
+
+    defineField({ group: 'generated', name: 'lastGenerationResult',     title: 'Last Generation',         type: 'string',   readOnly: true }),
+    defineField({ group: 'generated', name: 'purchaseOrderGoogleDocUrl',title: 'Purchase Order — Google Doc URL', type: 'url',  readOnly: true }),
+    defineField({ group: 'generated', name: 'purchaseOrderPdfAsset',    title: 'Purchase Order — PDF File',      type: 'file', readOnly: true }),
+    defineField({ group: 'generated', name: 'purchaseOrderGeneratedAt', title: 'Purchase Order — Generated At',  type: 'datetime', readOnly: true }),
+
+    // Hidden metadata used internally by GenerateView
+    defineField({ name: 'generationStatus',    title: 'Generation Status',     type: 'string',   hidden: true }),
+    defineField({ name: 'generatedDocType',    title: 'Generated Doc Type',    type: 'string',   hidden: true }),
+    defineField({ name: 'generationError',     title: 'Generation Error',      type: 'string',   hidden: true }),
+
     // ── 2. Ordering ───────────────────────────────────────────────────────────
 
-    defineField({ group: 'ordering', name: 'purchaseOrderRef',    title: 'Purchase Order Number', type: 'string' }),
+    defineField({
+      group:      'ordering',
+      name:       'approvedOrderSummary',
+      title:      'Approved Order Summary',
+      type:       'string',
+      readOnly:   true,
+      components: { input: ApprovedOrderSummary },
+    }),
+
     defineField({ group: 'ordering', name: 'orderPlacedDate',     title: 'Order Placed Date',     type: 'date'   }),
     defineField({ group: 'ordering', name: 'orderShippedDate',    title: 'Order Shipped Date',    type: 'date'   }),
     defineField({ group: 'ordering', name: 'trackingNumber',      title: 'Tracking Number',       type: 'string' }),
@@ -232,27 +286,18 @@ export default defineType({
       hidden: ({ document }) => (document?.receivedStatus as string) === 'accepted',
     }),
 
-    // Assets created from this procurement (linked after acceptance)
-    defineField({
-      group:       'delivery',
-      name:        'assets',
-      title:       'Assets Created',
-      type:        'array',
-      description: 'Link Asset records created from accepted items in this delivery.',
-      of:          [defineArrayMember({ type: 'reference', to: [{ type: 'asset' }] })],
-    }),
-
     defineField({ group: 'delivery', name: 'deliveryNotes', title: 'Delivery Notes', type: 'text', rows: 2 }),
 
     // ── 4. Payment ────────────────────────────────────────────────────────────
 
     defineField({
       group:       'payment',
-      name:        'payments',
+      name:        'linkedPayments',
       title:       'Linked Payments',
-      type:        'array',
-      description: 'Payment documents covering this procurement.',
-      of:          [defineArrayMember({ type: 'reference', to: [{ type: 'payment' }] })],
+      type:        'string',
+      description: 'Auto-populated from Payment documents that reference this Procurement. To link a payment, open the Payment document and add this Procurement there.',
+      readOnly:    true,
+      components:  { input: LinkedPaymentsDisplay },
     }),
 
     defineField({
@@ -261,7 +306,8 @@ export default defineType({
       title:        'Payment Status',
       type:         'string',
       initialValue: 'unpaid',
-      description:  'Update manually or derive from linked Payment documents.',
+      description:  'Auto-derived from linked Payment documents.',
+      components:   { input: AutoProcurementPaymentStatusInput },
       options: {
         list: [
           { title: '❌ Unpaid',  value: 'unpaid'  },
@@ -306,7 +352,7 @@ export default defineType({
 
   preview: {
     select: {
-      number:    'procurementNumber',
+      number:    'purchaseOrderNumber',
       assetType: 'assetType',
       status:    'procurementStatus',
       items:     'comparisonItems',

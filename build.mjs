@@ -27,9 +27,9 @@
  * Requirements:  Node.js 18+ (uses native fetch, fs/path/url built-ins)
  */
 
-import { readFileSync, mkdirSync, writeFileSync } from 'fs'
-import { join, dirname }                           from 'path'
-import { fileURLToPath }                           from 'url'
+import { readFileSync, mkdirSync, writeFileSync, copyFileSync } from 'fs'
+import { join, dirname }                                        from 'path'
+import { fileURLToPath }                                        from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -66,8 +66,9 @@ if (!projects?.length) {
 }
 console.log(`Found ${projects.length} active project(s): ${projects.map(p => p.code).join(', ')}`)
 
-// ── 2. Read the HTML template once ───────────────────────────────────────────
+// ── 2. Read the HTML template and SW once ────────────────────────────────────
 const templateHtml = readFileSync(join(__dirname, 'vertical-signage.html'), 'utf8')
+const swSource     = readFileSync(join(__dirname, 'sw.js'), 'utf8')
 
 // ── 2b. Fetch global category config once (singleton, shared by all projects) ─
 console.log('Fetching global category config…')
@@ -103,17 +104,19 @@ for (const project of projects) {
         (!defined(endAt)   || endAt   >  now()) &&
         media->isActive == true &&
         media->kind in ["promo", "notice"] &&
-        (media->kind == "notice" || media->scope == "global" || "${projectId}" in media->projects[]._ref)
+        (media->scope == "global" || "${projectId}" in media->projects[]._ref)
       ] | order(order asc){
         "kind":            media->kind,
         "title":           media->title,
         "mediaType":       select(
-                             defined(media->type)              => media->type,
-                             defined(media->videoFile.asset)   => "video",
-                             defined(media->imageFile.asset)   => "image",
-                             defined(media->posterImage.asset) => "image"
+                             defined(media->type)                 => media->type,
+                             defined(media->videoFile.asset)      => "video",
+                             count(media->imageFiles) > 0         => "image",
+                             defined(media->imageFile.asset)      => "image",
+                             defined(media->posterImage.asset)    => "image"
                            ),
-        "url":             coalesce(media->videoFile.asset->url, media->imageFile.asset->url, media->posterImage.asset->url),
+        "url":             coalesce(media->videoFile.asset->url, media->imageFiles[0].asset->url, media->imageFile.asset->url, media->posterImage.asset->url),
+        "images":          media->imageFiles[].asset->url,
         "category":        coalesce(touchExploreCategory, media->offer->category),
         "defaultDuration": media->defaultImageDuration,
         "displayDuration": displayDuration,
@@ -133,12 +136,7 @@ for (const project of projects) {
     sanityFetch(`
       *[
         _type == "provider" &&
-        status == true &&
-        _id in *[
-          _type == "offer" &&
-          status == true &&
-          (scope == "global" || "${projectId}" in projects[]._ref)
-        ].provider._ref
+        status == true
       ]{
         "slug":          slug.current,
         name_th,
@@ -162,7 +160,7 @@ for (const project of projects) {
           _type == "offer" &&
           provider._ref == ^._id &&
           status == true &&
-          (scope == "global" || "${projectId}" in projects[]._ref)
+          (scope == "global" || !defined(scope) || "${projectId}" in projects[]._ref)
         ]{
           "slug":         slug.current,
           title_th,
@@ -172,6 +170,7 @@ for (const project of projects) {
           shortDesc_th,
           shortDesc_en,
           "primaryImage": primaryImage.asset->url,
+          "images":       images[].asset->url,
           ctaType,
           ctaURL,
           deepLink,
@@ -191,11 +190,14 @@ for (const project of projects) {
         _type == "media" &&
         kind == "notice" &&
         isActive == true &&
-        "${projectId}" in projects[]._ref
+        "${projectId}" in projects[]._ref &&
+        (!defined(expiresAt) || expiresAt > now())
       ] | order(_createdAt desc){
         title,
         tags,
+        "subCategoryIds": subCategories,
         "url": coalesce(videoFile.asset->url, imageFile.asset->url),
+        "posterImage": posterImage.asset->url,
         "offer": offer->{
           "slug": slug.current,
           title_th,
@@ -211,8 +213,15 @@ for (const project of projects) {
   ])
 
   // Group providers by category (mirrors the kiosk's MOCK_PROVIDERS shape)
+  // Deduplicate offers by slug within each provider
   const providers = {}
   ;(rawProviders ?? []).forEach(p => {
+    const seen = new Set()
+    p.offers = (p.offers ?? []).filter(o => {
+      if (seen.has(o.slug)) return false
+      seen.add(o.slug)
+      return true
+    })
     if (!providers[p.category]) providers[p.category] = []
     providers[p.category].push(p)
   })
@@ -240,10 +249,11 @@ for (const project of projects) {
       `<script>/* baked by build.mjs — ${baked.builtAt} */\nwindow.__BAKED__ = ${JSON.stringify(baked)};\n</script>\n</head>`
     )
 
-  // Write deploy/{code}/
-  const outDir = join(__dirname, 'deploy', code)
+  // Write ../{code}/ — each project gets its own sibling directory (and its own GitHub repo).
+  const outDir = join(__dirname, '..', code)
   mkdirSync(outDir, { recursive: true })
   writeFileSync(join(outDir, 'index.html'), injectedHtml, 'utf8')
+  writeFileSync(join(outDir, 'sw.js'),     swSource,     'utf8')
 
   // _headers: Netlify reads this from the publish directory unconditionally.
   // More reliable than netlify.toml when the site uses a repo subdirectory as publish dir.
@@ -267,7 +277,7 @@ for (const project of projects) {
   )
 
   console.log(
-    `  ✓  deploy/${code}/index.html` +
+    `  ✓  ../${code}/index.html` +
     `  (playlist: ${playlist?.length ?? 0}, providers: ${rawProviders?.length ?? 0}, notices: ${notices?.length ?? 0})`
   )
 }

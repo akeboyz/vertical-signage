@@ -212,6 +212,25 @@
         .provider-card-name { font-size: 1.35vh; font-weight: 700; color: #fff; text-align: center; line-height: 1.3; }
         .provider-card-sub  { font-size: 1.1vh; color: rgba(255,255,255,0.5); text-align: center; }
 
+        /* Update card — image version for building updates */
+        .update-card {
+            background: rgba(255,255,255,0.07); border: 0.15vh solid rgba(255,255,255,0.12);
+            border-radius: 2vh; overflow: hidden; cursor: pointer; flex-shrink: 0;
+            width: 21vh; display: flex; flex-direction: column;
+            touch-action: manipulation; transition: background 0.12s, border-color 0.12s;
+        }
+        .update-card:active { background: rgba(196,104,45,0.2); border-color: rgba(196,104,45,0.6); }
+        .update-card-img { width: 100%; height: 12vh; object-fit: cover; display: block; background: #0a1830; }
+        .update-card-img-ph {
+            width: 100%; height: 12vh; background: linear-gradient(135deg, #0a1830, #0f2545);
+            display: flex; align-items: center; justify-content: center; font-size: 3.5vh;
+        }
+        .update-card-title {
+            font-size: 1.35vh; font-weight: 700; color: #fff; line-height: 1.35;
+            padding: 1vh 1.2vh 1.4vh; display: -webkit-box;
+            -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+
         /* ==================== POPUP BACKDROP ==================== */
         .popup-backdrop {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 260;
@@ -306,7 +325,7 @@
             position: absolute; bottom: 1.5vh; left: 1.8vh; right: 1.8vh; width: auto;
             padding: 1.4vh 2vh; font-size: 1.85vh;
         }
-        .item-popup-meta { display: flex; gap: 1.2vh; flex-wrap: wrap; }
+.item-popup-meta { display: flex; gap: 1.2vh; flex-wrap: wrap; }
         .meta-tag {
             background: rgba(255,255,255,0.08); border-radius: 3vh;
             padding: 0.5vh 1.4vh; font-size: 1.35vh; color: rgba(255,255,255,0.68);
@@ -389,6 +408,30 @@
             cursor: pointer; touch-action: manipulation;
         }
         .send-confirm-ok-btn:active { background: rgba(196,104,45,0.45); }
+
+        /* ── Phone confirmation dialog ── */
+        .phone-confirm-panel {
+            background: rgba(255,255,255,0.06); border: 0.15vh solid rgba(255,255,255,0.15);
+            border-radius: 1.5vh; padding: 1.8vh 1.5vh 1.4vh;
+            flex-direction: column; gap: 1.2vh; align-items: center; text-align: center;
+        }
+        .phone-confirm-label { font-size: 1.35vh; color: rgba(255,255,255,0.55); }
+        .phone-confirm-number { font-size: 2.2vh; font-weight: 700; color: #fff; letter-spacing: 0.05em; }
+        .phone-confirm-btns { display: flex; gap: 1.2vh; margin-top: 0.4vh; }
+        .phone-confirm-yes {
+            background: rgba(196,104,45,0.22); border: 0.15vh solid rgba(196,104,45,0.55);
+            color: #C4682D; border-radius: 2vh; padding: 0.9vh 2.4vh;
+            font-size: 1.5vh; font-weight: 700; font-family: 'Montserrat', sans-serif;
+            cursor: pointer; touch-action: manipulation;
+        }
+        .phone-confirm-yes:active { background: rgba(196,104,45,0.45); }
+        .phone-confirm-edit {
+            background: rgba(255,255,255,0.06); border: 0.15vh solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.65); border-radius: 2vh; padding: 0.9vh 2.4vh;
+            font-size: 1.5vh; font-weight: 600; font-family: 'Montserrat', sans-serif;
+            cursor: pointer; touch-action: manipulation;
+        }
+        .phone-confirm-edit:active { background: rgba(255,255,255,0.15); }
 
         /* ==================== BOTTOM BAR ==================== */
         .bottom-bar {
@@ -661,7 +704,7 @@
                         </div>
                         <button class="popup-cta-btn" id="itemCtaBtn"></button>
                     </div>
-                    <div class="item-popup-meta" id="itemMeta"></div>
+<div class="item-popup-meta" id="itemMeta"></div>
                     <div class="item-popup-contacts" id="itemContacts"></div>
                 </div>
             </div>
@@ -694,6 +737,16 @@
                         <input class="phone-input" id="phoneInput" type="tel" inputmode="numeric" maxlength="10" placeholder="8X XXX XXXX">
                     </div>
                     <button class="popup-cta-btn" id="sendLinkBtn"></button>
+                    <!-- Step 2: confirm phone before submitting -->
+                    <div class="phone-confirm-panel" id="phoneConfirmPanel" style="display:none;">
+                        <div class="phone-confirm-label" id="phoneConfirmLabel"></div>
+                        <div class="phone-confirm-number" id="phoneConfirmNumber"></div>
+                        <div class="phone-confirm-btns">
+                            <button class="phone-confirm-yes"  id="phoneConfirmYes"></button>
+                            <button class="phone-confirm-edit" id="phoneConfirmEdit"></button>
+                        </div>
+                    </div>
+                    <!-- Step 3: success / error message -->
                     <div class="send-confirm-panel" id="sendConfirmPanel" style="display:none;">
                         <div class="send-confirm-msg" id="sendConfirmMsg"></div>
                         <button class="send-confirm-ok-btn" id="sendConfirmOk"></button>
@@ -728,8 +781,8 @@ const CONFIG = {
     CACHE_DURATION: 3600000,        // 1 hour
     CITY_ROTATION_INTERVAL: 8000,   // 8 seconds
     IDLE_TIMEOUT: 60000,            // 60 seconds — applied to Category, Item, Handoff states
-    HANDOFF_BASE: 'https://aquamx.biz/m',
-    LEAD_API:     'https://aquamx.biz/api/lead',
+    HANDOFF_BASE: 'https://www.aquamx.biz/m',
+    LEAD_API:     'https://www.aquamx.biz/api/lead',
 
     // ── Sanity CMS ────────────────────────────────────────────────────────────
     // Fill these in after running `npm create sanity@latest` in sanity-studio/
@@ -769,7 +822,7 @@ const CAT_CTA = {
 };
 
 // Maps panel cat IDs → category-config.json category IDs where they differ
-const CAT_ID_MAP = { 'building-updates': 'updates' };
+const CAT_ID_MAP = { 'building-updates': 'buildingUpdates' };
 
 // UI language: 'th' (default) or 'en'. Persisted in sessionStorage.
 let uiLang = sessionStorage.getItem('kiosk_lang') || 'th';
@@ -953,6 +1006,7 @@ async function loadBuildingUpdates() {
             description:   n.offer?.description_th ?? n.description ?? '',
             subCategoryIds: n.offer?.subCategories ?? n.subCategoryIds ?? [],
             url:           n.url ?? '',
+            image:         n.posterImage ?? n.offer?.primaryImage ?? null,
         };
     }
 
@@ -970,7 +1024,8 @@ async function loadBuildingUpdates() {
                   ?? new URLSearchParams(location.search).get('project')
                   ?? '';
         const q = `*[_type == "media" && kind == "notice" && isActive == true &&
-                    "${code}" in projects[]._ref
+                    "${code}" in projects[]._ref &&
+                    (!defined(expiresAt) || expiresAt > now())
                    ] | order(_createdAt desc){
             title,
             "url": coalesce(videoFile.asset->url, imageFile.asset->url),
@@ -1181,7 +1236,7 @@ function renderCategoryGrid(cat, catConfig, isUpdates) {
                 const row = document.createElement('div');
                 row.className = 'subcat-cards';
                 sectionItems.forEach(item => {
-                    const card = makeCard(item.icon, item.title, item.subtitle);
+                    const card = makeUpdateCard(item);
                     card.addEventListener('click', () => openUpdatePopup(item));
                     row.appendChild(card);
                 });
@@ -1189,11 +1244,14 @@ function renderCategoryGrid(cat, catConfig, isUpdates) {
                 grid.appendChild(section);
             });
         } else {
+            const row = document.createElement('div');
+            row.className = 'subcat-cards';
             allItems.forEach(item => {
-                const card = makeCard(item.icon, item.title, item.subtitle);
+                const card = makeUpdateCard(item);
                 card.addEventListener('click', () => openUpdatePopup(item));
-                grid.appendChild(card);
+                row.appendChild(card);
             });
+            grid.appendChild(row);
         }
         return;
     }
@@ -1430,6 +1488,16 @@ function makeCard(icon, name, sub) {
     return card;
 }
 
+function makeUpdateCard(item) {
+    const card = document.createElement('div');
+    card.className = 'update-card';
+    const imgHtml = item.image
+        ? `<img class="update-card-img" src="${item.image}" alt="" loading="lazy">`
+        : `<div class="update-card-img-ph">${item.icon || '📢'}</div>`;
+    card.innerHTML = `${imgHtml}<div class="update-card-title">${item.title || ''}</div>`;
+    return card;
+}
+
 /* Open offer-specific popup (reuses existing item popup elements) */
 function openOfferPopup(offer, provider, cat) {
     // offerSlug drives OLP deep-link in the handoff QR; PLP is fallback if null
@@ -1455,7 +1523,11 @@ function openOfferPopup(offer, provider, cat) {
 
     // Meta: price + availability
     const meta = [];
-    if (offer.price)        meta.push(offer.price);
+    if (offer.price) {
+        const p = offer.price.trim();
+        const hasCurrency = /฿|baht|free|ฟรี/i.test(p);
+        meta.push(hasCurrency ? p : `${p} Baht`);
+    }
     if (offer.availability) meta.push(offer.availability);
     document.getElementById('itemMeta').innerHTML =
         meta.map(v => `<div class="meta-tag">${v}</div>`).join('');
@@ -1593,9 +1665,11 @@ function populateItemGallery(imgList, phIcon) {
             [...dots.children].forEach(function (d, i) {
                 d.classList.toggle('active', i === idx);
             });
+
         }, { passive: true });
     }
 }
+
 
 /* ========================================================
    ITEM POPUP
@@ -1692,6 +1766,9 @@ function openHandoffPopup() {
         : 'Enter your phone number to be contacted';
     document.getElementById('sendLinkBtn').textContent = isTH ? 'ส่งเบอร์โทร' : 'Submit Number';
     document.getElementById('sendConfirmOk').textContent = isTH ? 'ตกลง' : 'OK';
+    document.getElementById('phoneConfirmLabel').textContent = isTH ? 'ยืนยันเบอร์โทรศัพท์ของท่าน' : 'Confirm your phone number';
+    document.getElementById('phoneConfirmYes').textContent  = isTH ? '✓ ยืนยัน' : '✓ Confirm';
+    document.getElementById('phoneConfirmEdit').textContent = isTH ? 'แก้ไข' : 'Edit';
 
     // QR code via qrserver.com — free, no auth, works in Android WebView
     document.getElementById('qrImage').src =
@@ -1708,6 +1785,7 @@ function openHandoffPopup() {
     }
 
     document.getElementById('phoneInput').value = '';
+    document.getElementById('phoneConfirmPanel').style.display = 'none';
     document.getElementById('sendConfirmPanel').style.display = 'none';
     document.getElementById('sendLinkBtn').style.display = '';
 
@@ -1730,26 +1808,49 @@ function closeHandoffPopup() {
     syncInteractingClass();
 }
 
-// Submit Number — saves lead to backend, then shows confirmation
-document.getElementById('sendLinkBtn').addEventListener('click', async function() {
+// ── Step 1: validate → show confirmation dialog ──────────────────────────────
+document.getElementById('sendLinkBtn').addEventListener('click', function() {
     const phone = document.getElementById('phoneInput').value.trim().replace(/\D/g, '');
-    const panel = document.getElementById('sendConfirmPanel');
-    const msg   = document.getElementById('sendConfirmMsg');
-    const btn   = this;
     const isTH  = uiLang === 'th';
 
-    if (!phone || phone.length < 8) {
-        document.getElementById('phoneInput').focus();
-        msg.textContent = isTH ? 'กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง' : 'Please enter a valid phone number.';
+    // Thai mobile: 10 digits, starts with 06x / 08x / 09x
+    const validTH = /^0[689]\d{8}$/.test(phone);
+    if (!validTH) {
+        const msg = document.getElementById('sendConfirmMsg');
+        msg.textContent = isTH
+            ? 'กรุณากรอกเบอร์มือถือที่ถูกต้อง (10 หลัก เริ่มต้น 06, 08 หรือ 09)'
+            : 'Please enter a valid Thai mobile number (10 digits, starting with 06, 08 or 09).';
         msg.style.color = '#FF8C69';
-        panel.style.display = 'flex';
+        document.getElementById('sendConfirmPanel').style.display = 'flex';
+        document.getElementById('phoneInput').focus();
         return;
     }
 
-    // Disable button to prevent double-submit
-    btn.disabled = true;
+    // Format for display: 0XX-XXX-XXXX
+    const formatted = `+66 ${phone.slice(1,3)}-${phone.slice(3,6)}-${phone.slice(6)}`;
+    document.getElementById('phoneConfirmNumber').textContent = formatted;
+    document.getElementById('sendLinkBtn').style.display      = 'none';
+    document.getElementById('sendConfirmPanel').style.display = 'none';
+    document.getElementById('phoneConfirmPanel').style.display = 'flex';
+});
 
-    // Build lead payload using current signage state
+// ── Step 2a: user taps Edit → go back to input ────────────────────────────────
+document.getElementById('phoneConfirmEdit').addEventListener('click', function() {
+    document.getElementById('phoneConfirmPanel').style.display = 'none';
+    document.getElementById('sendLinkBtn').style.display = '';
+    document.getElementById('phoneInput').focus();
+});
+
+// ── Step 2b: user taps Confirm → send lead ────────────────────────────────────
+document.getElementById('phoneConfirmYes').addEventListener('click', async function() {
+    const phone = document.getElementById('phoneInput').value.trim().replace(/\D/g, '');
+    const isTH  = uiLang === 'th';
+    const panel = document.getElementById('sendConfirmPanel');
+    const msg   = document.getElementById('sendConfirmMsg');
+
+    document.getElementById('phoneConfirmPanel').style.display = 'none';
+
+    // Build lead payload
     const p = S.provider;
     const leadPayload = {
         phone,
@@ -1764,7 +1865,7 @@ document.getElementById('sendLinkBtn').addEventListener('click', async function(
         source:        'kiosk',
     };
 
-    // POST to backend (non-blocking on failure — always show confirmation)
+    // POST to backend (non-blocking — always show success)
     try {
         await fetch(CONFIG.LEAD_API, {
             method:  'POST',
@@ -1775,17 +1876,16 @@ document.getElementById('sendLinkBtn').addEventListener('click', async function(
         console.error('[Lead] Submission failed:', err);
     }
 
-    // Show confirmation regardless of API success
+    // Show success
     msg.textContent = isTH
         ? 'ผู้ขาย/ผู้ให้บริการจะติดต่อกลับคุณในเร็ว ๆ นี้'
         : 'The seller/service provider will be in touch with you shortly.';
-    msg.style.color  = 'rgba(255,255,255,0.85)';
+    msg.style.color     = 'rgba(255,255,255,0.85)';
     panel.style.display = 'flex';
-    btn.style.display   = 'none';
     document.getElementById('phoneInput').value = '';
-    btn.disabled = false;
 });
 
+// ── Step 3: OK dismisses success message ─────────────────────────────────────
 document.getElementById('sendConfirmOk').addEventListener('click', function() {
     document.getElementById('sendConfirmPanel').style.display = 'none';
     document.getElementById('sendLinkBtn').style.display = '';
@@ -1980,7 +2080,7 @@ async function loadPlaylist() {
             (!defined(endAt)   || endAt   >  now()) &&
             media->isActive == true &&
             media->kind in ["promo", "notice"] &&
-            (media->kind == "notice" || media->scope == "global" || "${code}" in (media->projects[]->code.current))
+            (media->scope == "global" || "${code}" in (media->projects[]->code.current))
         ] | order(order asc){
             "kind":               media->kind,
             "title":              media->title,
@@ -2021,22 +2121,35 @@ async function loadPlaylist() {
 }
 
 function playVideo() {
-    const main   = document.getElementById('mainVideo');
-    const pre    = document.getElementById('preloadVideo');
+    const videoA = document.getElementById('mainVideo');
+    const videoB = document.getElementById('preloadVideo');
     const img    = document.getElementById('imageSlide');
     const notice = document.getElementById('noticeCard');
     let imageTimer = null;
+
+    // active = currently visible video element
+    // buffer = hidden element preloading the next video
+    let active = videoA;
+    let buffer = videoB;
 
     function advance() {
         currentVideoIndex = (currentVideoIndex + 1) % playlist.length;
         doPlay(currentVideoIndex);
     }
 
-    // Hide all three media layers in one call before switching slots
-    function hideAll() {
-        main.pause(); main.removeAttribute('src'); main.classList.add('video-hidden');
+    // Hide only non-video layers (image + notice card)
+    function hideOverlays() {
         img.classList.add('video-hidden'); img.removeAttribute('src');
         notice.classList.add('video-hidden');
+    }
+
+    // Preload the next video into buffer (called after each video starts)
+    function preloadNext(idx) {
+        const nxt = (idx + 1) % playlist.length;
+        if (playlist[nxt]?.mediaType === 'video' && playlist[nxt].url) {
+            buffer.src = playlist[nxt].url;
+            buffer.load();
+        }
     }
 
     function doPlay(idx) {
@@ -2045,23 +2158,23 @@ function playVideo() {
 
         if (cur.kind === 'notice' && !cur.url) {
             // ── Text-only notice card ─────────────────────────────────────────
-            // No asset URL — render a full-screen notice card for N seconds.
-            const secs = cur.imageDurationOverride ?? cur.defaultDuration ?? 10;
-            hideAll();
+            active.pause(); active.classList.add('video-hidden');
+            hideOverlays();
             document.getElementById('noticeCardTitle').textContent = cur.title ?? '';
             notice.classList.remove('video-hidden');
+            const secs = cur.imageDurationOverride ?? cur.defaultDuration ?? 10;
             imageTimer = setTimeout(() => { notice.classList.add('video-hidden'); advance(); }, secs * 1000);
 
         } else if (cur.mediaType === 'image') {
             // ── Image slot: single image or multi-image slideshow ─────────────
-            // duration = slot override ?? media default ?? 10 s (applied per image)
+            active.pause(); active.classList.add('video-hidden');
+            hideOverlays();
             const secs = cur.imageDurationOverride ?? cur.defaultDuration ?? 10;
             const urls = (cur.images?.length > 0) ? cur.images : (cur.url ? [cur.url] : []);
             if (urls.length === 0) { advance(); return; }
             let imgIdx = 0;
             function showNextImage() {
                 if (imgIdx >= urls.length) { advance(); return; }
-                hideAll();
                 img.src = urls[imgIdx++];
                 img.classList.remove('video-hidden');
                 imageTimer = setTimeout(showNextImage, secs * 1000);
@@ -2069,34 +2182,56 @@ function playVideo() {
             showNextImage();
 
         } else {
-            // ── Video slot (promo video or notice with video asset) ───────────
-            hideAll();
-            main.classList.remove('video-hidden');
-            main.src = cur.url;
-            main.load();
-            // Prevent stuck state: advance if canplay never fires (blocked / CORS / codec / autoplay denied)
-            let safeAdvanced = false;
-            function safeAdvance() { if (!safeAdvanced) { safeAdvanced = true; advance(); } }
-            const videoSafetyTimer = setTimeout(safeAdvance, 15000);
-            main.addEventListener('canplay', () => {
-                clearTimeout(videoSafetyTimer);
-                main.play().catch(safeAdvance);
-            }, { once: true });
-            main.addEventListener('error', () => {
-                clearTimeout(videoSafetyTimer);
-                safeAdvance();
-            }, { once: true });
-            // Preload next video (skip preload for image/notice-card slots)
-            const nxt = (currentVideoIndex + 1) % playlist.length;
-            if (playlist[nxt]?.mediaType === 'video') {
-                pre.src = playlist[nxt].url;
-                pre.load();
+            // ── Video slot — seamless A/B swap ────────────────────────────────
+            // Check if buffer already has this video preloaded and ready to play.
+            // readyState >= 3 (HAVE_FUTURE_DATA) means enough data to start playing.
+            const bufferSrc  = buffer.getAttribute('src') ?? '';
+            const bufferReady = bufferSrc === cur.url && buffer.readyState >= 3;
+
+            hideOverlays();
+
+            function swapToBuffer() {
+                // Hide current active (keeps last frame — no black flash)
+                active.pause();
+                active.classList.add('video-hidden');
+                // Swap references
+                const tmp = active; active = buffer; buffer = tmp;
+                // Show and play the new active
+                active.classList.remove('video-hidden');
+                active.play().catch(() => advance());
+                // Preload next into (now free) buffer
+                preloadNext(idx);
+            }
+
+            if (bufferReady) {
+                // Buffer is ready — instant swap, no loading gap
+                swapToBuffer();
+            } else {
+                // Buffer not ready — load into buffer while keeping old active visible
+                // (user sees old video's last frame instead of black screen)
+                buffer.src = cur.url;
+                buffer.load();
+
+                let safeAdvanced = false;
+                function safeAdvance() { if (!safeAdvanced) { safeAdvanced = true; advance(); } }
+                const safety = setTimeout(safeAdvance, 15000);
+
+                buffer.addEventListener('canplay', () => {
+                    clearTimeout(safety);
+                    swapToBuffer();
+                }, { once: true });
+
+                buffer.addEventListener('error', () => {
+                    clearTimeout(safety);
+                    safeAdvance();
+                }, { once: true });
             }
         }
     }
 
-    // Video natural-end handler (image/notice slots use their own timer above)
-    main.addEventListener('ended', advance);
+    // Both elements can be active — attach ended listener to both
+    videoA.addEventListener('ended', advance);
+    videoB.addEventListener('ended', advance);
 
     doPlay(currentVideoIndex);
 }
@@ -2104,6 +2239,15 @@ function playVideo() {
 /* ========================================================
    INIT
 ======================================================== */
+// ── Service Worker registration ──────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+        console.log('[SW] Registered, scope:', reg.scope);
+    }).catch(err => {
+        console.warn('[SW] Registration failed:', err);
+    });
+}
+
 async function init() {
     // ── Clear stale localStorage keys from previous sessions ────────────────
     ['weather_data','weather_data_time','news_data','news_ts'].forEach(k => localStorage.removeItem(k));
@@ -2113,6 +2257,18 @@ async function init() {
 
     // ── Load all data sources in parallel ───────────────────────────────────
     await Promise.all([loadPlaylist(), loadCategoryConfig(), loadProviders(), loadBuildingUpdates()]);
+
+    // ── Pre-warm SW cache with all playlist video/image URLs ─────────────────
+    // Runs after playlist loads so SW downloads everything before the second loop.
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        const mediaUrls = playlist
+            .map(item => item.url)
+            .filter(url => url && /\.(mp4|webm|mov|jpg|jpeg|png|webp)(\?.*)?$/i.test(url));
+        if (mediaUrls.length) {
+            navigator.serviceWorker.controller.postMessage({ action: 'prewarm', urls: mediaUrls });
+            console.log('[SW] Prewarm sent for', mediaUrls.length, 'media URLs');
+        }
+    }
 
     // ── Start playlist playback (isolated — a crash here must not kill clocks) ─
     try { playVideo(); } catch(e) { /* playlist empty or corrupt; clocks/news still start */ }

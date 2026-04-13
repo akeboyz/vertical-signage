@@ -1,5 +1,8 @@
 import { defineField, defineType } from 'sanity'
-import { ExcludedProjectsInput } from '../components/ExcludedProjectsInput'
+import { ExcludedProjectsInput }      from '../components/ExcludedProjectsInput'
+import { NoticeSubcategoryInput }     from '../components/NoticeSubcategoryInput'
+import { VideoCompressInput }         from '../components/VideoCompressInput'
+import { PosterImageAIInput }         from '../components/PosterImageAIInput'
 
 // category field removed from media — category now lives on offer.
 // schedule (startAt/endAt) removed from media — scheduling consolidated on playlistItem.
@@ -27,12 +30,29 @@ export default defineType({
       validation: Rule => Rule.required(),
     }),
 
+    // ── Poster image (notices: upload first, then AI reads it) ────────────────
+    defineField({
+      name:        'posterImage',
+      title:       'Poster Image',
+      type:        'image',
+      options:     { hotspot: true },
+      description: 'For notices: upload the announcement image here, then click 🤖 Read Image with AI to auto-fill the titles below. For promos: fallback thumbnail shown before video loads.',
+      components:  { input: PosterImageAIInput },
+    }),
+
     // ── Identity ─────────────────────────────────────────────────────────────
     defineField({
-      name: 'title',
-      title: 'Title',
-      type: 'string',
-      validation: Rule => Rule.required(),
+      name:        'title',
+      title:       'Title (Thai)',
+      type:        'string',
+      validation:  Rule => Rule.required(),
+      description: 'Main title shown on screen. For notices: auto-filled by 🤖 Read Image with AI above.',
+    }),
+    defineField({
+      name:        'altText',
+      title:       'Title (English)',
+      type:        'string',
+      description: 'English version of the title. For notices: auto-filled by 🤖 Read Image with AI above.',
     }),
 
     // ── Asset type + files (promo only) ──────────────────────────────────────
@@ -61,6 +81,7 @@ export default defineType({
       title: 'Video File (MP4)',
       type: 'file',
       options: { accept: 'video/*' },
+      components: { input: VideoCompressInput },
       hidden: ({ document }) => {
         const doc = document as any
         return doc?.kind !== 'promo' || doc?.type !== 'video'
@@ -95,20 +116,29 @@ export default defineType({
       description: 'Upload 1–6 images. Multiple images play as a slideshow, each shown for the duration below.',
     }),
 
-    // ── Default duration (promo image only) ──────────────────────────────────
+    // ── Default duration ──────────────────────────────────────────────────────
+    // For promo images: per-image duration × image count = total slot duration
+    // For notices:      single image, this is the total display duration
     // Resolution: playlistItem.displayDuration ?? media.defaultImageDuration ?? 10
-    // Each image in a slideshow is shown for this duration.
     defineField({
       name: 'defaultImageDuration',
-      title: 'Duration per Image (seconds)',
+      title: 'Display Duration (seconds)',
       type: 'number',
       initialValue: 10,
       hidden: ({ document }) => {
         const doc = document as any
-        return doc?.kind !== 'promo' || doc?.type !== 'image'
+        return doc?.type === 'video'
       },
-      description: 'How long each image is shown. Override per playlist slot via PlaylistItem.displayDuration.',
+      description: 'How long this item is shown on screen. For slideshows, this is per image.',
       validation: Rule => Rule.min(1).max(300),
+    }),
+    defineField({
+      name:        'videoDuration',
+      title:       'Video Duration (seconds)',
+      type:        'number',
+      hidden:      ({ document }) => (document as any)?.type !== 'video',
+      description: 'Total length of the video in seconds. Used to calculate playlist total duration.',
+      validation:  Rule => Rule.min(1),
     }),
 
     // ── Legacy single image (hidden — kept for backward compatibility) ─────────
@@ -138,11 +168,12 @@ export default defineType({
 
     // ── Provider (convenience shortcut) ──────────────────────────────────────
     defineField({
-      name: 'provider',
-      title: 'Provider (convenience)',
-      type: 'reference',
-      to: [{ type: 'provider' }],
-      description: 'Optional. Offer already carries the provider reference.',
+      name:        'provider',
+      title:       'Provider (convenience)',
+      type:        'reference',
+      to:          [{ type: 'provider' }],
+      options:     { filter: 'providerType == "juristicOffice"' },
+      description: 'Optional. Shows Juristic Office providers only. Offer already carries the provider reference.',
     }),
 
     // ── Scope ─────────────────────────────────────────────────────────────────
@@ -195,6 +226,15 @@ export default defineType({
       description: 'Master switch. Disabling hides this media from ALL playlists.',
     }),
 
+    // ── Expiry (notices only) ─────────────────────────────────────────────────
+    defineField({
+      name:        'expiresAt',
+      title:       'Expiration Date',
+      type:        'datetime',
+      hidden:      ({ document }) => (document as any)?.kind !== 'notice',
+      description: 'Optional. Once this date passes, the notice is automatically excluded from the playlist. Leave blank to never expire.',
+    }),
+
     // ── Playlist auto-slot ────────────────────────────────────────────────────
     // Applies to both promo and notice.
     // initialValue=false: opt-in; avoids accidental duplicate slots on re-publish.
@@ -237,25 +277,12 @@ export default defineType({
       title: 'Sub-categories',
       type: 'array',
       of: [{ type: 'string' }],
-      options: { layout: 'tags' },
       hidden: ({ document }) => (document as any)?.kind !== 'notice',
-      description: 'Tag this notice with subcategory IDs from Category Config (e.g. "regulations", "events", "maintenance").',
+      description: 'Select which subcategories this notice appears under in Building Updates.',
+      components: { input: NoticeSubcategoryInput },
     }),
 
     // ── Extra metadata ────────────────────────────────────────────────────────
-    defineField({
-      name: 'posterImage',
-      title: 'Poster Image',
-      type: 'image',
-      options: { hotspot: true },
-      description: 'Fallback thumbnail shown before video loads, or in media pickers.',
-    }),
-    defineField({
-      name: 'altText',
-      title: 'Alt Text',
-      type: 'string',
-      description: 'Accessibility label for this asset.',
-    }),
     defineField({
       name: 'tags',
       title: 'Tags',
@@ -267,20 +294,22 @@ export default defineType({
 
   preview: {
     select: {
-      title:      'title',
-      kind:       'kind',
-      type:       'type',
-      isActive:   'isActive',
-      videoAsset: 'videoFile.asset.originalFilename',
-      imageAsset: 'imageFile.asset.originalFilename',
-      offerTitle: 'offer.title_th',
+      title:       'title',
+      kind:        'kind',
+      type:        'type',
+      isActive:    'isActive',
+      videoAsset:  'videoFile.asset.originalFilename',
+      imageAsset:  'imageFile.asset.originalFilename',
+      offerTitle:  'offer.title_th',
+      projectName: 'projects.0.title',
     },
-    prepare({ title, kind, type, isActive, videoAsset, imageAsset, offerTitle }) {
+    prepare({ title, kind, type, isActive, videoAsset, imageAsset, offerTitle, projectName }) {
       const status = isActive === false ? '  ·  DISABLED' : ''
       if (kind === 'notice') {
+        const prefix = projectName ? `[${projectName}]` : '[NOTICE]'
         return {
-          title:    `[NOTICE] ${title ?? '(untitled)'}${status}`,
-          subtitle: 'Project-specific notice',
+          title:    `${prefix} ${title ?? '(untitled)'}${status}`,
+          subtitle: projectName ? `Notice  ·  ${projectName}` : 'Notice (no project linked)',
         }
       }
       const asset = videoAsset ?? imageAsset ?? '(no file)'

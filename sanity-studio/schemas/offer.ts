@@ -1,4 +1,6 @@
 import { defineField, defineType } from 'sanity'
+import { SubCategoriesInput }  from '../components/SubCategoriesInput'
+import { createTranslateInput } from '../components/TranslateInput'
 
 // Must stay in sync with provider.ts, media.ts, playlistItem.ts, categoryConfig.ts
 const CATEGORY_LIST = [
@@ -56,19 +58,35 @@ export default defineType({
 
     // ── Identity ─────────────────────────────────────────────────────────────
     defineField({
-      name: 'title_th',
-      title: 'Title (Thai)',
-      type: 'string',
+      name:       'title_th',
+      title:      'Title (Thai)',
+      type:       'string',
       validation: Rule => Rule.required(),
+      components: { input: createTranslateInput({ sourceField: 'title_en', sourceLang: 'English', targetLang: 'Thai',    buttonLabel: '✨ Translate from English' }) },
     }),
-    defineField({ name: 'title_en', title: 'Title (English)', type: 'string' }),
     defineField({
-      name: 'slug',
+      name:       'title_en',
+      title:      'Title (English)',
+      type:       'string',
+      components: { input: createTranslateInput({ sourceField: 'title_th', sourceLang: 'Thai',    targetLang: 'English', buttonLabel: '✨ Translate from Thai'    }) },
+    }),
+    defineField({
+      name:  'slug',
       title: 'Slug',
-      type: 'slug',
-      options: { source: 'title_th' },
+      type:  'slug',
+      options: {
+        source: (doc: any) => doc.title_en || doc.title_th || '',
+        slugify: (input: string) =>
+          input
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, '')
+            .trim()
+            .replace(/[\s_]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-+|-+$/g, ''),
+      },
       validation: Rule => Rule.required(),
-      description: 'Used in kiosk deep link /m/{category}/{slug}.',
+      description: 'Auto-generated from English title. Fill Title (English) first, then click Generate.',
     }),
 
     // ── Routing ───────────────────────────────────────────────────────────────
@@ -85,7 +103,9 @@ export default defineType({
       title: 'Sub-Categories',
       type: 'array',
       of: [{ type: 'string' }],
-      description: 'Must match string values in this project\'s categoryConfig (e.g. "Dine-in", "Vegan").',
+      components: { input: SubCategoriesInput },
+      validation: Rule => Rule.required().min(1).error('Select at least one subcategory.'),
+      description: 'Subcategories are filtered by the Category selected above.',
     }),
 
     // ── Status ────────────────────────────────────────────────────────────────
@@ -98,10 +118,18 @@ export default defineType({
     }),
 
     // ── Content ───────────────────────────────────────────────────────────────
-    defineField({ name: 'shortDesc_th',   title: 'Short Description (Thai)',    type: 'string' }),
-    defineField({ name: 'shortDesc_en',   title: 'Short Description (English)', type: 'string' }),
-    defineField({ name: 'description_th', title: 'Description (Thai)',          type: 'text', rows: 3 }),
-    defineField({ name: 'description_en', title: 'Description (English)',       type: 'text', rows: 3 }),
+    defineField({ name: 'shortDesc_th', title: 'Short Description (Thai)',    type: 'string',
+      components: { input: createTranslateInput({ sourceField: 'shortDesc_en', sourceLang: 'English', targetLang: 'Thai',    buttonLabel: '✨ Translate from English' }) },
+    }),
+    defineField({ name: 'shortDesc_en', title: 'Short Description (English)', type: 'string',
+      components: { input: createTranslateInput({ sourceField: 'shortDesc_th', sourceLang: 'Thai',    targetLang: 'English', buttonLabel: '✨ Translate from Thai'    }) },
+    }),
+    defineField({ name: 'description_th', title: 'Description (Thai)',    type: 'text', rows: 3,
+      components: { input: createTranslateInput({ sourceField: 'description_en', sourceLang: 'English', targetLang: 'Thai',    buttonLabel: '✨ Translate from English' }) },
+    }),
+    defineField({ name: 'description_en', title: 'Description (English)', type: 'text', rows: 3,
+      components: { input: createTranslateInput({ sourceField: 'description_th', sourceLang: 'Thai',    targetLang: 'English', buttonLabel: '✨ Translate from Thai'    }) },
+    }),
     defineField({
       name: 'price',
       title: 'Price',
@@ -114,6 +142,7 @@ export default defineType({
       title: 'Gallery Images',
       type: 'array',
       of: [{ type: 'image', options: { hotspot: true } }],
+      options: { layout: 'grid' },
     }),
 
     // ── CTA ──────────────────────────────────────────────────────────────────

@@ -1,6 +1,16 @@
 import { defineField, defineType, defineArrayMember } from 'sanity'
-import { DynamicFieldsInput }      from '../components/DynamicFieldsInput'
-import { AutoPaymentSetupInput }   from '../components/AutoSetupRefInput'
+import { DynamicFieldsInput }                     from '../components/DynamicFieldsInput'
+import { AutoPaymentSetupInput }                  from '../components/AutoSetupRefInput'
+import { ProcurementsArrayInput }                from '../components/ProcurementsArrayInput'
+import { ProcessSetupDescriptionBanner }        from '../components/ProcessSetupDescriptionBanner'
+import { ApprovalLockedBanner }                from '../components/ApprovalLockedBanner'
+import { createAutoNumberInput }               from '../components/AutoNumberInput'
+import { AutoPaymentStatusInput }             from '../components/AutoPaymentStatusInput'
+import { AutoPaidAmountInput }               from '../components/AutoPaidAmountInput'
+import { ExpenseCategoryInput }               from '../components/ExpenseCategoryInput'
+
+const PaymentNumberInput  = createAutoNumberInput('payment', { fixedPrefix: 'PMT' })
+const ExpenseNumberInput  = createAutoNumberInput('expense',  { fixedPrefix: 'EXP' })
 
 /**
  * Payment — tracks a payment against one or more Procurement documents.
@@ -25,51 +35,74 @@ export default defineType({
 
   fields: [
 
+    // ── Approval locked banner ────────────────────────────────────────────────
+    defineField({
+      group:      'setup',
+      name:       'approvalLockedBanner',
+      title:      'Approval Lock',
+      type:       'string',
+      readOnly:   true,
+      components: { input: ApprovalLockedBanner },
+    }),
+
+    // ── Payment Mode ──────────────────────────────────────────────────────────
+    defineField({
+      group:        'setup',
+      name:         'paymentMode',
+      title:        'Payment Mode',
+      type:         'string',
+      initialValue: 'procurement',
+      options: {
+        list: [
+          { title: '🛒 Procurement Payment — pay against a Procurement record', value: 'procurement'    },
+          { title: '💸 Direct Expense — one-off expense without Procurement',   value: 'direct_expense' },
+        ],
+        layout: 'radio',
+      },
+    }),
+
+    // ── Process Setup description banner (top of form) ────────────────────────
+    defineField({
+      group:      'setup',
+      name:       'setupDescriptionBanner',
+      title:      'Process Setup Guide',
+      type:       'string',
+      hidden:     ({ document }) => (document?.paymentMode as string) === 'direct_expense' || !(document?.contractType as any)?._ref,
+      components: { input: ProcessSetupDescriptionBanner },
+    }),
+
     // ── Status (top-level, always visible) ────────────────────────────────────
 
     defineField({
+      group:        'setup',
       name:         'paymentStatus',
       title:        'Payment Status',
       type:         'string',
       initialValue: 'created',
-      options: {
-        list: [
-          { title: '📝 Created',              value: 'created'          },
-          { title: '📤 Submitted',            value: 'submitted'        },
-          { title: '✅ Approved',             value: 'approved'         },
-          { title: '❌ Rejected',             value: 'rejected'         },
-          { title: '🔍 Condition Met',        value: 'condition_met'    },
-          { title: '🔄 Processing',           value: 'processing'       },
-          { title: '💳 Paid',                 value: 'paid'             },
-          { title: '🧾 Receipt Collected',    value: 'complete'         },
-        ],
-        layout: 'radio',
-      },
-      validation: Rule => Rule.required(),
+      components:   { input: AutoPaymentStatusInput },
     }),
 
     // ── 1. Setup ──────────────────────────────────────────────────────────────
 
     defineField({
-      group:        'setup',
-      name:         'procurementStatus',
-      title:        'Procurement Status',
-      type:         'string',
-      description:  'Overall delivery status of the linked Procurement(s). Update manually or sync from Procurement.',
-      initialValue: 'created',
-      options: {
-        list: [
-          { title: '📝 Created',                  value: 'created'            },
-          { title: '🔄 Processing',               value: 'processing'         },
-          { title: '✅ Approved',                 value: 'approved'           },
-          { title: '📦 Order Placed',             value: 'order_placed'       },
-          { title: '🚚 Order Shipped',            value: 'order_shipped'      },
-          { title: '✅ Delivered — Accepted',     value: 'delivered_accepted' },
-          { title: '⚠️ Delivered — Partial',      value: 'delivered_partial'  },
-          { title: '❌ Delivered — Rejected',     value: 'delivered_rejected' },
-        ],
-        layout: 'radio',
-      },
+      group:       'setup',
+      name:        'paymentNumber',
+      title:       'Payment Reference Number',
+      type:        'string',
+      hidden:      ({ document }) => (document?.paymentMode as string) === 'direct_expense',
+      readOnly:    ({ document }) => (document?.approvalStatus as string) === 'approved',
+      description: 'Auto-generated payment reference number. Format: PMT-yymm-001.',
+      components:  { input: PaymentNumberInput },
+    }),
+
+    defineField({
+      group:       'setup',
+      name:        'expenseNumber',
+      title:       'Expense Reference Number',
+      type:        'string',
+      hidden:      ({ document }) => (document?.paymentMode as string) !== 'direct_expense',
+      description: 'Auto-generated expense reference number. Format: EXP-yymm-001.',
+      components:  { input: ExpenseNumberInput },
     }),
 
     defineField({
@@ -77,8 +110,25 @@ export default defineType({
       name:        'procurements',
       title:       'Procurements',
       type:        'array',
-      description: 'Link one or more Procurement documents covered by this payment. Must be the same vendor.',
-      of:          [defineArrayMember({ type: 'reference', to: [{ type: 'procurement' }] })],
+      hidden:      ({ document }) => (document?.paymentMode as string) === 'direct_expense',
+      readOnly:    ({ document }) => (document?.approvalStatus as string) === 'approved',
+      description: 'Link one or more Procurement documents covered by this payment. Vendor will be auto-filled from the first linked procurement.',
+      validation:  Rule => Rule.custom((value, context) => {
+        if ((context.document?.paymentMode as string) === 'direct_expense') return true
+        if (!value || (value as any[]).length === 0) return 'At least one Procurement must be linked before submitting for approval.'
+        return true
+      }),
+      components:  { input: ProcurementsArrayInput },
+      of: [defineArrayMember({
+        type: 'reference',
+        to:   [{ type: 'procurement' }],
+        options: {
+          filter: ({ document }: { document: any }) => ({
+            filter: '!(_id in *[_type == "payment" && !(_id in path("drafts.**")) && _id != $currentId][].procurements[]._ref)',
+            params: { currentId: (document._id as string)?.replace(/^drafts\./, '') ?? '' },
+          }),
+        },
+      })],
     }),
 
     defineField({
@@ -87,15 +137,66 @@ export default defineType({
       title:       'Vendor',
       type:        'reference',
       to:          [{ type: 'party' }],
+      readOnly:    ({ document }) => (document?.approvalStatus as string) === 'approved',
       description: 'Auto-fill from the linked Procurement, or select manually.',
+      validation:  Rule => Rule.custom((value, context) => {
+        if ((context.document?.paymentMode as string) === 'direct_expense') return true
+        if (!value) return 'Vendor is required.'
+        return true
+      }),
     }),
 
     defineField({
-      group: 'setup',
-      name:  'paymentAmount',
-      title: 'Payment Amount',
-      type:  'number',
+      group:       'setup',
+      name:        'paymentAmount',
+      title:       'Payment Amount',
+      type:        'number',
+      readOnly:    ({ document }) => (document?.approvalStatus as string) === 'approved',
       description: 'Total amount to be paid. Auto-calculate from Procurements or enter manually.',
+      validation:  Rule => Rule.required().min(0),
+    }),
+
+    // ── Direct Expense fields ─────────────────────────────────────────────────
+
+    defineField({
+      group:       'setup',
+      name:        'expenseProjectSite',
+      title:       'Project Site',
+      type:        'reference',
+      to:          [{ type: 'projectSite' }],
+      hidden:      ({ document }) => (document?.paymentMode as string) !== 'direct_expense',
+      description: 'The project site this expense belongs to. Used to auto-link costs in Install & Activate.',
+      validation:  Rule => Rule.custom((value, context) => {
+        if ((context.document?.paymentMode as string) !== 'direct_expense') return true
+        if (!value) return 'Project Site is required for Direct Expense payments.'
+        return true
+      }),
+    }),
+
+    defineField({
+      group:       'setup',
+      name:        'expenseCategory',
+      title:       'Expense Category',
+      type:        'string',
+      hidden:      ({ document }) => (document?.paymentMode as string) !== 'direct_expense',
+      description: 'Category from Process Setup (e.g. Electrical Work, Wifi Setup). Determines which Install & Activate cost group this expense contributes to.',
+      components:  { input: ExpenseCategoryInput },
+    }),
+
+    defineField({
+      name:   'costGroup',
+      title:  'Cost Group',
+      type:   'string',
+      hidden: true,   // auto-filled by ExpenseCategoryInput
+    }),
+
+    defineField({
+      group:       'setup',
+      name:        'expenseDescription',
+      title:       'Payment Notes',
+      type:        'string',
+      hidden:      ({ document }) => (document?.paymentMode as string) !== 'direct_expense',
+      description: 'Any clarification specific to this payment — e.g. scope of work, reference number, or special conditions.',
     }),
 
     defineField({
@@ -103,6 +204,7 @@ export default defineType({
       name:         'currency',
       title:        'Currency',
       type:         'string',
+      readOnly:     ({ document }) => (document?.approvalStatus as string) === 'approved',
       initialValue: 'THB',
       options: {
         list: [
@@ -127,10 +229,11 @@ export default defineType({
     }),
 
     defineField({
-      group:   'setup',
-      name:    'paymentType',
-      title:   'Payment Type',
-      type:    'string',
+      group:    'setup',
+      name:     'paymentType',
+      title:    'Payment Type',
+      type:     'string',
+      readOnly: ({ document }) => (document?.approvalStatus as string) === 'approved',
       options: {
         list: [
           { title: '🏦 Bank Transfer',       value: 'transfer' },
@@ -142,10 +245,12 @@ export default defineType({
     }),
 
     defineField({
-      group:   'setup',
-      name:    'paymentCondition',
-      title:   'Payment Condition',
-      type:    'string',
+      group:    'setup',
+      name:     'paymentCondition',
+      title:    'Payment Condition',
+      type:     'string',
+      hidden:   ({ document }) => (document?.paymentMode as string) === 'direct_expense',
+      readOnly: ({ document }) => (document?.approvalStatus as string) === 'approved',
       options: {
         list: [
           { title: 'Upon Order Placed',    value: 'order_placed'    },
@@ -159,10 +264,11 @@ export default defineType({
     }),
 
     defineField({
-      group:   'setup',
-      name:    'withholdingTaxRate',
-      title:   'Withholding Tax Rate',
-      type:    'string',
+      group:        'setup',
+      name:         'withholdingTaxRate',
+      title:        'Withholding Tax Rate',
+      type:         'string',
+      readOnly:     ({ document }) => (document?.approvalStatus as string) === 'approved',
       options: {
         list: [
           { title: 'None',           value: 'none'   },
@@ -185,35 +291,22 @@ export default defineType({
     }),
 
     defineField({
-      group: 'setup',
-      name:  'dueDate',
-      title: 'Payment Due Date',
-      type:  'date',
+      group:    'setup',
+      name:     'dueDate',
+      title:    'Payment Due Date',
+      type:     'date',
+      readOnly: ({ document }) => (document?.approvalStatus as string) === 'approved',
     }),
 
     defineField({ group: 'setup', name: 'submittedBy',   title: 'Submitted By',   type: 'string' }),
     defineField({ group: 'setup', name: 'submittedDate', title: 'Submitted Date', type: 'date'   }),
 
-    defineField({
-      group:        'setup',
-      name:         'approvalResult',
-      title:        'Approval Result',
-      type:         'string',
-      options: {
-        list: [
-          { title: '⏳ Pending',  value: 'pending'  },
-          { title: '✅ Approved', value: 'approved' },
-          { title: '❌ Rejected', value: 'rejected' },
-        ],
-      },
-      initialValue: 'pending',
-    }),
-
-    defineField({ group: 'setup', name: 'approvedBy',        title: 'Approved By',        type: 'string' }),
-    defineField({ group: 'setup', name: 'approvedDate',       title: 'Approved Date',      type: 'date'   }),
-    defineField({ group: 'setup', name: 'approvalRejectionReason', title: 'Rejection Reason', type: 'text', rows: 2,
-      hidden: ({ document }) => (document?.approvalResult as string) !== 'rejected',
-    }),
+    // ── Hidden approval fields (written by ApprovalView / approval API) ───────
+    defineField({ name: 'approvalStatus',       title: 'Approval Status',        type: 'string',   hidden: true }),
+    defineField({ name: 'notificationEmail',    title: 'Notification Email',     type: 'string',   hidden: true }),
+    defineField({ name: 'approvedAt',           title: 'Approved At',            type: 'datetime', hidden: true }),
+    defineField({ name: 'approvalResetReason',  title: 'Approval Reset Reason',  type: 'string',   hidden: true }),
+    defineField({ name: 'lastApprovalSnapshot', title: 'Last Approval Snapshot', type: 'string',   hidden: true }),
 
     // ── 2. Execution ──────────────────────────────────────────────────────────
 
@@ -223,11 +316,16 @@ export default defineType({
       title:        'Condition Met',
       type:         'boolean',
       initialValue: false,
+      hidden:       ({ document }) => (document?.paymentMode as string) === 'direct_expense',
       description:  'Check manually, or auto-derived from linked Procurement status.',
     }),
 
-    defineField({ group: 'execution', name: 'conditionMetDate',  title: 'Condition Met Date',  type: 'date'   }),
-    defineField({ group: 'execution', name: 'conditionMetNotes', title: 'Condition Met Notes', type: 'string' }),
+    defineField({ group: 'execution', name: 'conditionMetDate',  title: 'Condition Met Date',  type: 'date',
+      hidden: ({ document }) => (document?.paymentMode as string) === 'direct_expense',
+    }),
+    defineField({ group: 'execution', name: 'conditionMetNotes', title: 'Condition Met Notes', type: 'string',
+      hidden: ({ document }) => (document?.paymentMode as string) === 'direct_expense',
+    }),
 
     defineField({
       group:       'execution',
@@ -238,7 +336,11 @@ export default defineType({
     }),
 
     defineField({ group: 'execution', name: 'paymentDate',   title: 'Payment Date',   type: 'date'   }),
-    defineField({ group: 'execution', name: 'paidAmount',    title: 'Paid Amount',    type: 'number' }),
+    defineField({ group: 'execution', name: 'paidAmount', title: 'Paid Amount', type: 'number',
+      readOnly:    ({ document }) => (document?.approvalStatus as string) === 'approved',
+      description: 'Auto-filled from approved Payment Amount. Locked after approval.',
+      components:  { input: AutoPaidAmountInput },
+    }),
     defineField({ group: 'execution', name: 'whtAmount',     title: 'W/H Tax Amount', type: 'number' }),
 
     defineField({
@@ -316,6 +418,7 @@ export default defineType({
       title:      'Process Setup',
       type:       'reference',
       to:         [{ type: 'contractType' }],
+      hidden:     ({ document }) => (document?.paymentMode as string) === 'direct_expense',
       components: { input: AutoPaymentSetupInput },
     }),
 
@@ -324,6 +427,7 @@ export default defineType({
       name:        'dynamicFields',
       title:       'Activity Dynamic Fields',
       type:        'string',
+      hidden:      ({ document }) => (document?.paymentMode as string) === 'direct_expense',
       description: 'Fields defined by the selected Process Setup.',
       components:  { input: DynamicFieldsInput },
     }),
@@ -352,12 +456,16 @@ export default defineType({
 
   preview: {
     select: {
-      status:     'paymentStatus',
-      vendor:     'vendor.legalName_en',
-      amount:     'paymentAmount',
-      currency:   'currency',
+      number:        'paymentNumber',
+      expenseNumber: 'expenseNumber',
+      mode:          'paymentMode',
+      status:        'paymentStatus',
+      vendor:        'vendor.legalName_en',
+      amount:        'paymentAmount',
+      currency:      'currency',
+      category:      'expenseCategory',
     },
-    prepare({ status, vendor, amount, currency }) {
+    prepare({ number, expenseNumber, mode, status, vendor, amount, currency, category }: { number?: string; expenseNumber?: string; mode?: string; status?: string; vendor?: string; amount?: number; currency?: string; category?: string }) {
       const statusLabel: Record<string, string> = {
         created:       '📝 Created',
         submitted:     '📤 Submitted',
@@ -368,9 +476,12 @@ export default defineType({
         paid:          '💳 Paid',
         complete:      '🧾 Complete',
       }
-      const amountStr = amount ? `${Number(amount).toLocaleString()} ${currency ?? 'THB'}` : ''
+      const isExpense  = mode === 'direct_expense'
+      const ref        = isExpense ? (expenseNumber ?? '💸 Expense') : (number ?? '(no number)')
+      const nameLabel  = isExpense ? (category ?? vendor ?? '(no category)') : (vendor ?? '(no vendor)')
+      const amountStr  = amount ? `${Number(amount).toLocaleString()} ${currency ?? 'THB'}` : ''
       return {
-        title:    vendor ?? '(no vendor)',
+        title:    `${ref}${nameLabel ? ` — ${nameLabel}` : ''}`,
         subtitle: [statusLabel[status ?? ''] ?? '', amountStr].filter(Boolean).join('  ·  '),
       }
     },

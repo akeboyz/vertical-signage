@@ -12,7 +12,13 @@
   "include": [
     "sanity.config.ts",
     "sanity.cli.ts",
-    "schemas/**/*.ts"
+    "schemas/**/*.ts",
+    "plugins/**/*.ts",
+    "plugins/**/*.tsx",
+    "actions/**/*.ts",
+    "actions/**/*.tsx",
+    "views/**/*.tsx",
+    "components/**/*.tsx"
   ],
   "exclude": [
     "node_modules",

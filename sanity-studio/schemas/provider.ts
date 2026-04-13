@@ -1,4 +1,10 @@
 import { defineField, defineType } from 'sanity'
+import { createRetrieveFromPartyInput } from '../components/RetrieveFromPartyInput'
+import { createProviderNameInput }      from '../components/ProviderNameInput'
+import { createTranslateInput }         from '../components/TranslateInput'
+
+const NameThInput = createProviderNameInput('th')
+const NameEnInput = createProviderNameInput('en')
 
 // Must stay in sync with offer.ts, media.ts, playlistItem.ts, categoryConfig.ts
 const CATEGORY_LIST = [
@@ -19,6 +25,15 @@ export default defineType({
   title: 'Provider',
   type: 'document',
   fields: [
+    // ── Party link (CRM) ──────────────────────────────────────────────────────
+    defineField({
+      name:        'party',
+      title:       'Linked Party (CRM)',
+      type:        'reference',
+      to:          [{ type: 'party' }],
+      description: 'Link to the Party record in CRM. Use ↙ buttons below to pull contact info.',
+    }),
+
     // ── Classification ────────────────────────────────────────────────────────
     defineField({
       name: 'providerType',
@@ -45,23 +60,39 @@ export default defineType({
 
     // ── Identity ─────────────────────────────────────────────────────────────
     defineField({
-      name: 'name_th',
-      title: 'Name (Thai)',
-      type: 'string',
-      validation: Rule => Rule.required(),
+      name:        'name_th',
+      title:       'Name (Thai)',
+      type:        'string',
+      description: 'Name shown in media. Can differ from the legal entity name (e.g. shop name).',
+      validation:  Rule => Rule.required(),
+      components:  { input: NameThInput },
     }),
     defineField({
-      name: 'name_en',
-      title: 'Name (English)',
-      type: 'string',
+      name:        'name_en',
+      title:       'Name (English)',
+      type:        'string',
+      description: 'Enter the name to be displayed in media. This can differ from the provider\'s legal entity name (e.g. shop name).',
+      components:  { input: NameEnInput },
     }),
     defineField({
-      name: 'slug',
+      name:  'slug',
       title: 'Slug',
-      type: 'slug',
-      options: { source: 'name_th' },
+      type:  'slug',
+      options: {
+        // Prefer English name for the slug — produces clean ASCII URLs.
+        // Falls back to Thai name only if English is empty.
+        source: (doc: any) => doc.name_en || doc.name_th || '',
+        slugify: (input: string) =>
+          input
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, '')   // strip non-ASCII / special chars
+            .trim()
+            .replace(/[\s_]+/g, '-')    // spaces → hyphens
+            .replace(/-+/g, '-')        // collapse multiple hyphens
+            .replace(/^-+|-+$/g, ''),   // trim leading/trailing hyphens
+      },
       validation: Rule => Rule.required(),
-      description: 'Used in kiosk deep link /m/{category}/{slug}.',
+      description: 'Used in kiosk deep link /m/p/{slug}. Auto-generated from English name — always ASCII-safe.',
     }),
     defineField({
       name: 'status',
@@ -91,15 +122,19 @@ export default defineType({
     defineField({ name: 'thumbnail',  title: 'Thumbnail',   type: 'image', options: { hotspot: true } }),
 
     // ── Description ───────────────────────────────────────────────────────────
-    defineField({ name: 'description_th', title: 'Description (Thai)',    type: 'text', rows: 3 }),
-    defineField({ name: 'description_en', title: 'Description (English)', type: 'text', rows: 3 }),
+    defineField({ name: 'description_th', title: 'Description (Thai)',    type: 'text', rows: 3,
+      components: { input: createTranslateInput({ sourceField: 'description_en', sourceLang: 'English', targetLang: 'Thai', buttonLabel: '✨ Translate from English' }) },
+    }),
+    defineField({ name: 'description_en', title: 'Description (English)', type: 'text', rows: 3,
+      components: { input: createTranslateInput({ sourceField: 'description_th', sourceLang: 'Thai', targetLang: 'English', buttonLabel: '✨ Translate from Thai' }) },
+    }),
 
     // ── Contact & Location ────────────────────────────────────────────────────
     defineField({ name: 'locationText', title: 'Location',     type: 'string', description: 'e.g. G Floor, Zone A' }),
     defineField({ name: 'mapUrl',       title: 'Map URL',       type: 'url' }),
-    defineField({ name: 'phone',        title: 'Phone',         type: 'string' }),
-    defineField({ name: 'lineId',       title: 'LINE ID',       type: 'string' }),
-    defineField({ name: 'website',      title: 'Website',       type: 'url' }),
+    defineField({ name: 'phone',   title: 'Phone',    type: 'string', components: { input: createRetrieveFromPartyInput('phone')   } }),
+    defineField({ name: 'lineId',  title: 'LINE ID',  type: 'string', components: { input: createRetrieveFromPartyInput('lineId')  } }),
+    defineField({ name: 'website', title: 'Website',  type: 'url',    components: { input: createRetrieveFromPartyInput('website') } }),
     defineField({ name: 'openingHours', title: 'Opening Hours', type: 'string', description: 'e.g. 10:00–22:00' }),
 
     // ── Handoff ───────────────────────────────────────────────────────────────

@@ -8,11 +8,17 @@
     "deploy": "sanity deploy"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.10",
+    "@ffmpeg/util": "^0.12.1",
     "@sanity/vision": "^3.0.0",
+    "@types/papaparse": "^5.5.2",
+    "papaparse": "^5.5.3",
     "sanity": "^3.0.0",
-    "styled-components": "^6.3.11"
+    "styled-components": "^6.3.11",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@ffmpeg/core-st": "^0.12.6",
     "typescript": "^5.0.0"
   }
 }

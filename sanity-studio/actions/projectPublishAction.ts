@@ -34,10 +34,11 @@ export function ProjectPublishAction(props: DocumentActionProps) {
         // so the project reference resolves correctly
         await new Promise(r => setTimeout(r, 800))
         try {
+          const publishedId = props.id.replace(/^drafts\./, '')
           await client.create({
             _id:     `drafts.${crypto.randomUUID()}`,
             _type:   'playlistItem',
-            project: { _type: 'reference', _ref: props.id },
+            project: { _type: 'reference', _ref: publishedId },
             order:   1,
             enabled: true,
           })

@@ -1,4 +1,6 @@
 import { defineField, defineType, defineArrayMember } from 'sanity'
+import { GrammarCheckInput }   from '../components/GrammarCheckInput'
+import { LockableTextInput }   from '../components/LockableTextInput'
 import { TranslateFromSelect }    from '../components/TranslateFromSelect'
 import { FormulaBaseFieldSelect }   from '../components/FormulaBaseFieldSelect'
 import { FormulaAmountFieldSelect } from '../components/FormulaAmountFieldSelect'
@@ -23,8 +25,10 @@ export default defineType({
   groups: [
     { name: 'identity', title: 'Identity'       },
     { name: 'asset',    title: 'Asset Config'   },
+    { name: 'service',  title: 'Service Config' },
     { name: 'workflow', title: 'Pipeline Steps' },
     { name: 'contract', title: 'Contract Phase' },
+    { name: 'expense',  title: 'Expense Config' },
   ],
 
   fields: [
@@ -56,6 +60,7 @@ export default defineType({
       type:        'text',
       rows:        2,
       description: 'Optional internal note about when to use this process setup.',
+      components:  { input: LockableTextInput },
     }),
 
     defineField({
@@ -96,6 +101,15 @@ export default defineType({
 
     defineField({
       group:        'identity',
+      name:         'useForExpense',
+      title:        'Use for Expense',
+      type:         'boolean',
+      description:  'Enable expense categories for this process. Expense categories will be available when creating Direct Expense payments.',
+      initialValue: false,
+    }),
+
+    defineField({
+      group:        'identity',
       name:         'useAssetConfig',
       title:        'Use Asset Config',
       type:         'boolean',
@@ -105,19 +119,28 @@ export default defineType({
 
     defineField({
       group:        'identity',
-      name:         'usePaymentStatus',
-      title:        'Show Payment Status on Procurement',
+      name:         'useForServiceContract',
+      title:        'Use for Service Contract',
       type:         'boolean',
-      description:  'Show a Payment Status summary field on Procurement documents using this setup.',
+      description:  'Mark this as a Service Contract process type (e.g. Internet, Maintenance, SaaS). Dynamic fields defined below will appear in Service Contract documents using this setup.',
+      initialValue: false,
+    }),
+
+    defineField({
+      group:        'identity',
+      name:         'usePaymentStatus',
+      title:        'Show Payment Status',
+      type:         'boolean',
+      description:  'Show a Payment Status summary field on documents using this setup.',
       initialValue: true,
     }),
 
     defineField({
       group:        'identity',
       name:         'useProcurementStatus',
-      title:        'Show Procurement Status on Payment',
+      title:        'Show Procurement Status',
       type:         'boolean',
-      description:  'Show a Procurement Status summary field on Payment documents using this setup.',
+      description:  'Show a Procurement Status summary field on documents using this setup.',
       initialValue: true,
     }),
 
@@ -149,6 +172,60 @@ export default defineType({
             description: 'Human-readable name shown in Asset and Procurement forms. e.g. "LED Screen 55\\"", "Media Player".',
             validation:  Rule => Rule.required(),
           }),
+          defineField({
+            name:        'assetCode',
+            title:       'Asset Code',
+            type:        'string',
+            description: '1–4 uppercase letters used in the asset tag. e.g. "SC" for Screen, "AP" for App License, "RT" for Router. Must be unique — duplicates will be highlighted in red and the record cannot be saved.',
+            validation:  Rule => Rule.required().max(4).custom((value, context) => {
+              if (!value) return true
+              const allTypes = (context.document?.assetTypes ?? []) as { assetCode?: string; _key?: string }[]
+              const current  = (context.parent as { _key?: string })?._key
+              const dupes    = allTypes.filter(t => t._key !== current && t.assetCode?.toUpperCase() === value.toUpperCase())
+              return dupes.length === 0 ? true : `Asset code "${value.toUpperCase()}" is already used by another asset type.`
+            }),
+          }),
+          defineField({
+            name:        'setupManual',
+            title:       'Setup Manual',
+            type:        'array',
+            description: 'Step-by-step setup instructions shown to technicians in Install & Activate when this asset type is selected.',
+            of: [defineArrayMember({
+              type:  'object',
+              name:  'setupStep',
+              title: 'Step',
+              fields: [
+                defineField({
+                  name:       'stepTitle',
+                  title:      'Step Title',
+                  type:       'string',
+                  validation: Rule => Rule.required(),
+                }),
+                defineField({
+                  name:  'description',
+                  title: 'Description',
+                  type:  'text',
+                  rows:  3,
+                }),
+                defineField({
+                  name:        'warning',
+                  title:       'Warning',
+                  type:        'string',
+                  description: 'Optional caution note shown highlighted in red. e.g. "Do not power on before bracket is secured."',
+                }),
+              ],
+              preview: {
+                select: { title: 'stepTitle', warning: 'warning' },
+                prepare({ title, warning }: { title?: string; warning?: string }) {
+                  return {
+                    title:    title ?? '—',
+                    subtitle: warning ? `⚠️ ${warning}` : undefined,
+                  }
+                },
+              },
+            })],
+          }),
+
           defineField({
             name:        'specGroups',
             title:       'Spec Groups',
@@ -199,6 +276,7 @@ export default defineType({
                           list: [
                             { title: 'Short text', value: 'string' },
                             { title: 'Number',     value: 'number' },
+                            { title: 'Date',       value: 'date'   },
                             { title: 'Long text',  value: 'text'   },
                             { title: 'Yes / No',   value: 'yes_no' },
                           ],
@@ -231,6 +309,125 @@ export default defineType({
           select: { name: 'name', key: 'key', groups: 'specGroups' },
           prepare({ name, key, groups }: { name?: string; key?: string; groups?: any[] }) {
             const fieldCount = (groups ?? []).reduce((sum: number, g: any) => sum + (g.specFields?.length ?? 0), 0)
+            return {
+              title:    name ?? key ?? '—',
+              subtitle: `key: ${key ?? '?'} · ${(groups ?? []).length} group(s) · ${fieldCount} field(s)`,
+            }
+          },
+        },
+      })],
+    }),
+
+    // ── Service Config ───────────────────────────────────────────────────────────
+
+    defineField({
+      group:       'service',
+      name:        'serviceTypes',
+      title:       'Service Types',
+      type:        'array',
+      description: 'Define the types of services used in this process (e.g. Internet, Maintenance, SaaS). Each type has its own fields.',
+      hidden:      ({ document }) => !(document?.useForServiceContract as boolean),
+      of: [defineArrayMember({
+        type:  'object',
+        name:  'serviceType',
+        title: 'Service Type',
+        fields: [
+          defineField({
+            name:        'key',
+            title:       'Key',
+            type:        'string',
+            description: 'Machine-readable identifier, no spaces. e.g. "internet", "maintenance", "saas".',
+            validation:  Rule => Rule.required(),
+          }),
+          defineField({
+            name:        'name',
+            title:       'Display Name',
+            type:        'string',
+            description: 'Human-readable name shown in Service Contract forms. e.g. "Internet", "Lift Maintenance".',
+            validation:  Rule => Rule.required(),
+          }),
+          defineField({
+            name:        'fieldGroups',
+            title:       'Field Groups',
+            type:        'array',
+            description: 'Group fields into sections. e.g. "Connection Details", "Support Info".',
+            of: [defineArrayMember({
+              type:  'object',
+              name:  'fieldGroup',
+              title: 'Field Group',
+              fields: [
+                defineField({
+                  name:        'groupName',
+                  title:       'Group Name',
+                  type:        'string',
+                  description: 'Section header shown in Service Contract forms. e.g. "Connection Details", "SLA".',
+                  validation:  Rule => Rule.required(),
+                }),
+                defineField({
+                  name:        'fields',
+                  title:       'Fields',
+                  type:        'array',
+                  of: [defineArrayMember({
+                    type:  'object',
+                    name:  'serviceField',
+                    title: 'Field',
+                    fields: [
+                      defineField({
+                        name:        'key',
+                        title:       'Key',
+                        type:        'string',
+                        description: 'Machine-readable identifier. e.g. "account_no", "bandwidth", "sla_hours".',
+                        validation:  Rule => Rule.required(),
+                      }),
+                      defineField({
+                        name:        'label',
+                        title:       'Label',
+                        type:        'string',
+                        description: 'Display name shown in Service Contract forms. e.g. "Account No.", "Bandwidth".',
+                        validation:  Rule => Rule.required(),
+                      }),
+                      defineField({
+                        name:         'fieldType',
+                        title:        'Field Type',
+                        type:         'string',
+                        initialValue: 'string',
+                        options: {
+                          list: [
+                            { title: 'Short text', value: 'string' },
+                            { title: 'Number',     value: 'number' },
+                            { title: 'Date',       value: 'date'   },
+                            { title: 'Long text',  value: 'text'   },
+                            { title: 'Yes / No',   value: 'yes_no' },
+                          ],
+                        },
+                        validation: Rule => Rule.required(),
+                      }),
+                    ],
+                    preview: {
+                      select: { title: 'label', subtitle: 'fieldType', key: 'key' },
+                      prepare({ title, subtitle, key }: { title?: string; subtitle?: string; key?: string }) {
+                        return { title: title ?? '—', subtitle: `{{${key ?? '?'}}} · ${subtitle ?? 'string'}` }
+                      },
+                    },
+                  })],
+                }),
+              ],
+              preview: {
+                select: { groupName: 'groupName', fields: 'fields' },
+                prepare({ groupName, fields }: { groupName?: string; fields?: any[] }) {
+                  return {
+                    title:    groupName ?? '—',
+                    subtitle: `${(fields ?? []).length} field(s)`,
+                  }
+                },
+              },
+            })],
+          }),
+        ],
+        preview: {
+          select: { name: 'name', key: 'key', groups: 'fieldGroups' },
+          prepare({ name, key, groups }: { name?: string; key?: string; groups?: any[] }) {
+            const fieldCount = (groups ?? []).reduce((sum: number, g: any) => sum + (g.fields?.length ?? 0), 0)
             return {
               title:    name ?? key ?? '—',
               subtitle: `key: ${key ?? '?'} · ${(groups ?? []).length} group(s) · ${fieldCount} field(s)`,
@@ -653,6 +850,74 @@ export default defineType({
           },
         }),
       ],
+    }),
+
+    // ── Expense Config ───────────────────────────────────────────────────────────
+
+    defineField({
+      group:       'expense',
+      name:        'expenseCategories',
+      title:       'Expense Categories',
+      type:        'array',
+      description: 'Define expense categories for Direct Expense payments (e.g. "Electrical Work", "Wifi Setup"). Each category maps to a cost group in Install & Activate.',
+      hidden:      ({ document }) => !(document?.useForExpense as boolean),
+      of: [defineArrayMember({
+        type:  'object',
+        name:  'expenseCategory',
+        title: 'Category',
+        fields: [
+          defineField({
+            name:        'key',
+            title:       'Key',
+            type:        'string',
+            description: 'Machine-readable identifier, no spaces. e.g. "electrical_work", "wifi_setup".',
+            validation:  Rule => Rule.required(),
+          }),
+          defineField({
+            name:        'name',
+            title:       'Display Name',
+            type:        'string',
+            description: 'Label shown in the Expense Category dropdown on Payment. e.g. "Electrical Work", "Wifi Setup".',
+            validation:  Rule => Rule.required(),
+          }),
+          defineField({
+            name:        'costGroup',
+            title:       'Links to Install & Activate Section',
+            type:        'string',
+            description: 'Determines which cost section this expense contributes to in the Install & Activate record.',
+            validation:  Rule => Rule.required(),
+            options: {
+              list: [
+                { title: '📦 Device Setup',        value: 'setup'      },
+                { title: '⚡ Electrical & Wiring', value: 'electrical' },
+                { title: '📶 Wifi & Router',       value: 'wifi'       },
+                { title: '✅ Activate & Test',     value: 'activation' },
+                { title: '📦 General / Other',     value: 'general'    },
+              ],
+            },
+          }),
+          defineField({
+            name:        'description',
+            title:       'Description',
+            type:        'text',
+            rows:        2,
+            description: 'Explain what expenses belong in this category. Shown as a hint to users when selecting this category.',
+            components:  { input: GrammarCheckInput },
+          }),
+        ],
+        preview: {
+          select: { name: 'name', key: 'key', costGroup: 'costGroup' },
+          prepare({ name, key, costGroup }: { name?: string; key?: string; costGroup?: string }) {
+            const groupIcon: Record<string, string> = {
+              setup: '📦', electrical: '⚡', wifi: '📶', activation: '✅', general: '📦',
+            }
+            return {
+              title:    name ?? key ?? '—',
+              subtitle: `key: ${key ?? '?'} · ${groupIcon[costGroup ?? ''] ?? ''} ${costGroup ?? '—'}`,
+            }
+          },
+        },
+      })],
     }),
 
   ],
