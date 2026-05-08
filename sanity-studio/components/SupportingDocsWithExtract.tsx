@@ -16,6 +16,16 @@ import { useState, useCallback }   from 'react'
 import { useClient, useFormValue } from 'sanity'
 import { useToast, Box, Stack, Text, Button, Flex, Card, Spinner, Badge, Dialog } from '@sanity/ui'
 
+const DOC_TYPE_LABEL: Record<string, string> = {
+  quotation: 'Quotation', invoice: 'Invoice', purchase_order: 'PO', other: 'Document',
+}
+
+function extFromUrl(url: string): string {
+  return url.split('?')[0].split('.').pop()?.toLowerCase() ?? ''
+}
+
+const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp'])
+
 const EXTRACT_URL =
   (process.env.SANITY_STUDIO_API_BASE_URL ?? 'https://aquamx-handoff.netlify.app') +
   '/api/extract-payment'
@@ -183,6 +193,7 @@ export function SupportingDocsWithExtract(props: any) {
 
   const applySelected = useCallback(async () => {
     if (!result || !docId) return
+    const draftId = `drafts.${docId.replace(/^drafts\./, '')}`
 
     const patchSet: Record<string, unknown> = {}
     for (const { key, sanityField } of FIELD_META) {
@@ -193,7 +204,7 @@ export function SupportingDocsWithExtract(props: any) {
     if (Object.keys(patchSet).length === 0) return
 
     try {
-      await client.patch(`drafts.${docId}`).set(patchSet).commit()
+      await client.patch(draftId).set(patchSet).commit()
       toast.push({
         status:      'success',
         title:       'Fields applied',
@@ -214,9 +225,59 @@ export function SupportingDocsWithExtract(props: any) {
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
+  // Pairs: [doc item, resolved URL] for items that have a file
+  const previewPairs = docs
+    .map((d: any) => ({ d, url: fileRefToUrl(d?.file?.asset?._ref ?? '') }))
+    .filter((p): p is { d: any; url: string } => p.url !== null)
+
   return (
     <Stack space={3}>
       {props.renderDefault(props)}
+
+      {/* ── Large file previews ─────────────────────────────────────────── */}
+      {previewPairs.length > 0 && (
+        <div style={{
+          display:               'grid',
+          gridTemplateColumns:   'repeat(auto-fill, minmax(180px, 1fr))',
+          gap:                   12,
+        }}>
+          {previewPairs.map(({ d, url }, i) => {
+            const ext     = extFromUrl(url)
+            const isImage = IMAGE_EXTS.has(ext)
+            const label   = DOC_TYPE_LABEL[d?.docType ?? ''] ?? 'Document'
+            return (
+              <Card key={i} border radius={2} overflow="hidden" shadow={1}>
+                <a href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'none' }}>
+                  {isImage ? (
+                    <img
+                      src={url}
+                      alt={label}
+                      style={{ width: '100%', height: 220, objectFit: 'contain', background: '#f5f5f5', display: 'block' }}
+                    />
+                  ) : (
+                    <Flex
+                      align="center"
+                      justify="center"
+                      direction="column"
+                      gap={2}
+                      style={{ height: 220, background: '#fdf0ec' }}
+                    >
+                      <span style={{ fontSize: 52, lineHeight: 1 }}>📑</span>
+                      <Text size={0} muted>Click to open</Text>
+                    </Flex>
+                  )}
+                </a>
+                <Box padding={2} style={{ borderTop: '1px solid var(--card-border-color)' }}>
+                  <Text size={0} weight="semibold">{label}</Text>
+                  {d?.note && (
+                    <Text size={0} muted style={{ marginTop: 2 }}>{d.note}</Text>
+                  )}
+                </Box>
+              </Card>
+            )
+          })}
+        </div>
+      )}
 
       <Button
         text={fileUrls.length === 0
