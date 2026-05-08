@@ -354,9 +354,10 @@
         /* ==================== UPDATE POPUP (Building Updates) ==================== */
         .update-popup-label { font-size: 1.4vh; font-weight: 700; color: #C4682D; letter-spacing: 0.2vh; text-transform: uppercase; }
         .update-popup-image {
-            width: 100%; height: 24vh; border-radius: 2vh;
+            width: 100%; height: 24vh; border-radius: 2vh; overflow: hidden;
             display: flex; align-items: center; justify-content: center; font-size: 6vh; flex-shrink: 0;
         }
+        .update-popup-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .update-popup-title { font-size: 2.5vh; font-weight: 700; color: #fff; }
         .update-popup-subtitle { font-size: 1.75vh; color: #C4682D; font-weight: 600; }
         .update-popup-body { font-size: 1.65vh; color: rgba(255,255,255,0.72); line-height: 1.65; }
@@ -1029,6 +1030,7 @@ async function loadBuildingUpdates() {
                    ] | order(_createdAt desc){
             title,
             "url": coalesce(videoFile.asset->url, imageFile.asset->url),
+            "posterImage": posterImage.asset->url,
             "offer": offer->{ "slug": slug.current, title_th, subCategories, shortDesc_th, description_th }
         }`;
         const results = await sanityFetch(q);
@@ -1716,8 +1718,14 @@ function closeItemPopup() {
 function openUpdatePopup(upd) {
     S.update = upd; S.popup = 'update';
 
-    document.getElementById('updateImage').style.background = upd.bgColor || '#101808';
-    document.getElementById('updateImage').textContent = upd.icon;
+    const imageEl = document.getElementById('updateImage');
+    if (upd.image) {
+        imageEl.style.background = '#101808';
+        imageEl.innerHTML = `<img src="${upd.image}" alt="">`;
+    } else {
+        imageEl.style.background = upd.bgColor || '#101808';
+        imageEl.textContent = upd.icon;
+    }
     document.getElementById('updateTitle').textContent = upd.title;
     document.getElementById('updateSubtitle').textContent = upd.subtitle;
     document.getElementById('updateBody').textContent = upd.description;
@@ -1727,18 +1735,19 @@ function openUpdatePopup(upd) {
     syncInteractingClass();
 }
 
+function closeUpdatePopup() {
+    S.popup = null;
+    document.getElementById('updateBackdrop').classList.remove('open');
+    document.getElementById('updateImage').innerHTML = '';
+    if (S.screen === 'category') resetIdle(); else clearTimeout(S.idleTimer);
+    syncInteractingClass();
+}
+
 document.getElementById('updateClose').addEventListener('click', closeUpdatePopup);
 document.getElementById('updateBackdrop').addEventListener('click', function(e) {
     if (e.target === this) closeUpdatePopup();
 });
 document.getElementById('updatePopupBox').addEventListener('click', e => e.stopPropagation());
-
-function closeUpdatePopup() {
-    S.popup = null;
-    document.getElementById('updateBackdrop').classList.remove('open');
-    if (S.screen === 'category') resetIdle(); else clearTimeout(S.idleTimer);
-    syncInteractingClass();
-}
 
 /* ========================================================
    HANDOFF POPUP — QR + phone UI
@@ -2240,7 +2249,9 @@ function playVideo() {
    INIT
 ======================================================== */
 // ── Service Worker registration ──────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
+// Skip SW on localhost — CDN assets load directly; SW's cors-mode fetch causes
+// double-errors (503 + CORS block) when the CDN returns errors without CORS headers.
+if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
     navigator.serviceWorker.register('./sw.js').then(reg => {
         console.log('[SW] Registered, scope:', reg.scope);
     }).catch(err => {
