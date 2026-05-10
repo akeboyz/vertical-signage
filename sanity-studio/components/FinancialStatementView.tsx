@@ -202,6 +202,7 @@ export function FinancialStatementView(_props: any) {
   const [incomeBalances, setIncomeBalances] = useState<Map<string, Balance>>(new Map())  // period only: txns from → to, no BF
   const [regCapData,     setRegCapData]     = useState<{ amount: number | null; accountIds: Set<string> }>({ amount: null, accountIds: new Set() })
   const [supportingDocs, setSupportingDocs] = useState<SupportingDoc[]>([])
+  const [hoveredDoc,     setHoveredDoc]     = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!from && !to) {
@@ -1045,20 +1046,28 @@ export function FinancialStatementView(_props: any) {
                 </Text>
                 {supportingDocs.map(doc => {
                   const isHighlighted = !!(highlightYear && doc.fiscalYearLabel && doc.fiscalYearLabel.includes(highlightYear))
+                  const isHovered     = hoveredDoc === doc._key && !!doc.fileUrl
                   return (
-                    <Flex
+                    <a
                       key={doc._key}
-                      align="center"
-                      justify="space-between"
-                      gap={2}
+                      href={doc.fileUrl ?? undefined}
+                      download={doc.fileUrl ? (doc.fileName ?? true) : undefined}
+                      target="_blank"
+                      rel="noreferrer"
+                      onMouseEnter={() => doc.fileUrl && setHoveredDoc(doc._key)}
+                      onMouseLeave={() => setHoveredDoc(null)}
                       style={{
-                        padding:      '4px 8px',
-                        borderRadius: 3,
-                        background:   isHighlighted ? 'rgba(34,197,94,0.07)' : undefined,
-                        border:       `1px solid ${isHighlighted ? 'var(--card-positive-fg-color, #22c55e)' : 'transparent'}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                        padding: '4px 8px', borderRadius: 3,
+                        background: isHighlighted
+                          ? 'rgba(34,197,94,0.07)'
+                          : isHovered ? 'var(--card-muted-bg-color)' : undefined,
+                        border:  `1px solid ${isHighlighted ? 'var(--card-positive-fg-color, #22c55e)' : 'transparent'}`,
+                        cursor:  doc.fileUrl ? 'pointer' : 'default',
+                        textDecoration: 'none', color: 'inherit',
                       }}
                     >
-                      <Flex align="center" gap={2} style={{ minWidth: 0, overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
                         <span style={{ fontSize: 10, color: 'var(--card-muted-fg-color)', flexShrink: 0 }}>•</span>
                         <span style={{
                           fontSize: 12, lineHeight: '1.4', flexShrink: 1,
@@ -1077,23 +1086,16 @@ export function FinancialStatementView(_props: any) {
                             {doc.fiscalYearLabel}
                           </span>
                         )}
-                      </Flex>
+                      </div>
                       {doc.fileUrl && (
-                        <a
-                          href={doc.fileUrl}
-                          download={doc.fileName ?? true}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            fontSize: 11, flexShrink: 0,
-                            color: 'var(--card-link-fg-color, #2276fc)',
-                            textDecoration: 'none',
-                          }}
-                        >
+                        <span style={{
+                          fontSize: 11, flexShrink: 0,
+                          color: 'var(--card-link-fg-color, #2276fc)',
+                        }}>
                           ⬇
-                        </a>
+                        </span>
                       )}
-                    </Flex>
+                    </a>
                   )
                 })}
               </Stack>
@@ -1213,15 +1215,26 @@ export function FinancialStatementView(_props: any) {
               const highlightYear = from ? from.slice(0, 4) : null
               return supportingDocs.map(doc => {
                 const isHighlighted = !!(highlightYear && doc.fiscalYearLabel && doc.fiscalYearLabel.includes(highlightYear))
+                const isHovered     = hoveredDoc === doc._key && !!doc.fileUrl
                 const dateLabel     = doc.uploadedAt ? doc.uploadedAt.slice(0, 10) : null
                 return (
-                  <div
+                  <a
                     key={doc._key}
+                    href={doc.fileUrl ?? undefined}
+                    download={doc.fileUrl ? (doc.fileName ?? true) : undefined}
+                    target="_blank"
+                    rel="noreferrer"
+                    onMouseEnter={() => doc.fileUrl && setHoveredDoc(doc._key)}
+                    onMouseLeave={() => setHoveredDoc(null)}
                     style={{
-                      padding:      '8px 10px',
-                      borderRadius: 4,
-                      border:       `1px solid ${isHighlighted ? 'var(--card-positive-fg-color, #22c55e)' : 'var(--card-border-color)'}`,
-                      background:   isHighlighted ? 'rgba(34,197,94,0.07)' : undefined,
+                      display: 'block',
+                      padding: '8px 10px', borderRadius: 4,
+                      border: `1px solid ${isHighlighted ? 'var(--card-positive-fg-color, #22c55e)' : 'var(--card-border-color)'}`,
+                      background: isHighlighted
+                        ? 'rgba(34,197,94,0.07)'
+                        : isHovered ? 'var(--card-muted-bg-color)' : undefined,
+                      cursor: doc.fileUrl ? 'pointer' : 'default',
+                      textDecoration: 'none', color: 'inherit',
                     }}
                   >
                     <Flex align="center" justify="space-between" gap={3}>
@@ -1252,22 +1265,16 @@ export function FinancialStatementView(_props: any) {
                           <Text size={0} muted>{dateLabel}</Text>
                         )}
                         {doc.fileUrl && (
-                          <a
-                            href={doc.fileUrl}
-                            download={doc.fileName ?? true}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{
-                              fontSize: 12, color: 'var(--card-link-fg-color, #2276fc)',
-                              textDecoration: 'none', whiteSpace: 'nowrap',
-                            }}
-                          >
+                          <span style={{
+                            fontSize: 12, color: 'var(--card-link-fg-color, #2276fc)',
+                            whiteSpace: 'nowrap',
+                          }}>
                             ⬇ Download
-                          </a>
+                          </span>
                         )}
                       </Flex>
                     </Flex>
-                  </div>
+                  </a>
                 )
               })
             })()}
