@@ -33,3 +33,7 @@ yarn-error.log*
 *.tmp
 *.temp
 .cache/
+
+# Environment / Netlify local
+.env.local
+sanity-studio/.netlify/

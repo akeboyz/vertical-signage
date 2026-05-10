@@ -1,0 +1,290 @@
+/**
+ * VideoCompressInput
+ *
+ * Wraps the native Sanity file input for the `videoFile` field.
+ * - Shows native upload normally (small files, or whenever the user prefers).
+ * - Adds an optional "Compress large video" section below.
+ *   - If file > 15 MB: warns and offers one-click compression via FFmpeg.wasm.
+ *   - FFmpeg WASM is loaded from the studio's own assets (bundled via Vite's
+ *     new URL() pattern — no external CDN, no CSP issues).
+ *   - After compression the component uploads the result with client.assets.upload().
+ */
+
+import { useRef, useState }                     from 'react'
+import { Stack, Button, Spinner, Flex, Text, Card, Badge } from '@sanity/ui'
+import { set }                                  from 'sanity'
+import { useClient }                            from 'sanity'
+
+const TARGET_MB    = 15
+const TARGET_BYTES = TARGET_MB * 1024 * 1024
+
+function fmt(bytes: number) {
+  return bytes >= 1_048_576
+    ? `${(bytes / 1_048_576).toFixed(1)} MB`
+    : `${(bytes / 1024).toFixed(0)} KB`
+}
+
+// Props compatible with Sanity file field custom input
+type Props = {
+  renderDefault: (props: any) => React.ReactNode
+  onChange:      (patch: any) => void
+  value?:        Record<string, unknown>
+}
+
+export function VideoCompressInput(props: Props) {
+  const client  = useClient({ apiVersion: '2024-01-01' })
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const [file,     setFile]     = useState<File | null>(null)
+  const [phase,    setPhase]    = useState<'idle' | 'compressing' | 'uploading' | 'done' | 'error'>('idle')
+  const [progress, setProgress] = useState(0)
+  const [msg,      setMsg]      = useState('')
+  const [errMsg,   setErrMsg]   = useState('')
+
+  // ── Upload compressed file to Sanity ────────────────────────────────────────
+  async function doUpload(f: File) {
+    setPhase('uploading')
+    setMsg('Uploading to Sanity…')
+    try {
+      const asset = await client.assets.upload('file', f, {
+        filename:    f.name,
+        contentType: f.type || 'video/mp4',
+      })
+      props.onChange(set({ _type: 'file', asset: { _type: 'reference', _ref: asset._id } }))
+      setPhase('done')
+      setFile(null)
+    } catch (e: any) {
+      setErrMsg(`Upload failed: ${e?.message ?? 'unknown error'}`)
+      setPhase('error')
+    }
+  }
+
+  // ── Compress then upload ─────────────────────────────────────────────────────
+  async function doCompress() {
+    if (!file) return
+    setPhase('compressing')
+    setProgress(0)
+    setErrMsg('')
+
+    try {
+      setMsg('Loading FFmpeg…')
+
+      const { FFmpeg }    = await import('@ffmpeg/ffmpeg')
+      const { fetchFile } = await import('@ffmpeg/util')
+
+      const ffmpeg = new FFmpeg()
+      ffmpeg.on('progress', ({ progress: p }) => {
+        const pct = Math.round(p * 100)
+        setProgress(pct)
+        setMsg(`Compressing… ${pct}%`)
+      })
+
+      // Load WASM from node_modules via Vite's new URL() asset resolution.
+      // This copies the files to the studio's own CDN — no external fetches,
+      // no CSP issues.
+      const coreURL = new URL(
+        '../node_modules/@ffmpeg/core-st/dist/esm/ffmpeg-core.js',
+        import.meta.url,
+      ).href
+      const wasmURL = new URL(
+        '../node_modules/@ffmpeg/core-st/dist/esm/ffmpeg-core.wasm',
+        import.meta.url,
+      ).href
+
+      await ffmpeg.load({ coreURL, wasmURL })
+
+      setMsg('Preparing video…')
+      await ffmpeg.writeFile('input.mp4', await fetchFile(file))
+
+      setMsg(`Compressing to ~${TARGET_MB} MB…`)
+
+      // CRF 28 = good quality / file-size balance.
+      // Scale: cap portrait height at 1920 px (9:16 signage), preserve aspect ratio.
+      await ffmpeg.exec([
+        '-i', 'input.mp4',
+        '-c:v', 'libx264',
+        '-crf', '28',
+        '-preset', 'fast',
+        '-vf', "scale='if(gt(ih,1920),trunc(1920*iw/ih/2)*2,iw)':'if(gt(ih,1920),1920,ih)'",
+        '-c:a', 'aac',
+        '-b:a', '96k',
+        '-movflags', '+faststart',
+        'output.mp4',
+      ])
+
+      const data       = await ffmpeg.readFile('output.mp4')
+      const blob       = new Blob([data as Uint8Array], { type: 'video/mp4' })
+      const outName    = file.name.replace(/(\.\w+)?$/, '_compressed.mp4')
+      const compressed = new File([blob], outName, { type: 'video/mp4' })
+
+      setMsg(`Compressed to ${fmt(compressed.size)} — uploading…`)
+      await doUpload(compressed)
+    } catch (e: any) {
+      const raw = e?.message ?? ''
+      // Distinguish compression engine errors from upload errors
+      const hint = raw.toLowerCase().includes('fetch') || raw.toLowerCase().includes('network')
+        ? 'Could not load compression engine (network or security policy). Compress the video externally (e.g. HandBrake) and upload via the field above.'
+        : raw || 'Compression failed'
+      setErrMsg(hint)
+      setPhase('error')
+    }
+  }
+
+  function reset() {
+    setFile(null)
+    setPhase('idle')
+    setProgress(0)
+    setMsg('')
+    setErrMsg('')
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const busy = phase === 'compressing' || phase === 'uploading'
+
+  return (
+    <Stack space={3}>
+
+      {/* ── Native Sanity file input (always shown — handles normal uploads) ── */}
+      {props.renderDefault(props)}
+
+      {/* ── Compress section ─────────────────────────────────────────────────── */}
+      <Card padding={3} radius={2} border tone="default">
+        <Stack space={3}>
+
+          <Flex align="center" gap={2}>
+            <Text size={1} weight="semibold">Compress large video</Text>
+            <Badge tone="primary" mode="outline" fontSize={0}>In-browser · target ~{TARGET_MB} MB</Badge>
+          </Flex>
+
+          <Text size={1} muted>
+            If your video is over {TARGET_MB} MB, pick it here to compress before uploading.
+          </Text>
+
+          {/* File picker */}
+          {!busy && phase !== 'done' && (
+            <>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="video/*"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (!f) return
+                  setFile(f)
+                  setPhase('idle')
+                  setErrMsg('')
+                }}
+              />
+              <Button
+                text="📁 Pick video to compress"
+                mode="ghost"
+                tone="primary"
+                onClick={() => fileRef.current?.click()}
+              />
+            </>
+          )}
+
+          {/* File info + action buttons */}
+          {file && phase === 'idle' && (
+            <Card
+              padding={3}
+              radius={2}
+              border
+              tone={file.size > TARGET_BYTES ? 'caution' : 'default'}
+            >
+              <Stack space={3}>
+                <Flex align="center" justify="space-between" gap={2}>
+                  <Text size={1} style={{ wordBreak: 'break-all', flex: 1 }}>{file.name}</Text>
+                  <Badge
+                    tone={file.size > TARGET_BYTES ? 'caution' : 'positive'}
+                    mode="outline"
+                    style={{ flexShrink: 0 }}
+                  >
+                    {fmt(file.size)}
+                  </Badge>
+                </Flex>
+
+                {file.size > TARGET_BYTES ? (
+                  <Text size={0} muted>
+                    ⚠ Over {TARGET_MB} MB — compression recommended.
+                  </Text>
+                ) : (
+                  <Text size={0} muted>
+                    File is already under {TARGET_MB} MB. Use the upload field above directly.
+                  </Text>
+                )}
+
+                <Flex gap={2} wrap="wrap">
+                  {file.size > TARGET_BYTES && (
+                    <Button
+                      text={`🗜 Compress & Upload (~${TARGET_MB} MB)`}
+                      mode="default"
+                      tone="primary"
+                      onClick={doCompress}
+                    />
+                  )}
+                  <Button
+                    text="Cancel"
+                    mode="ghost"
+                    tone="default"
+                    onClick={reset}
+                  />
+                </Flex>
+              </Stack>
+            </Card>
+          )}
+
+          {/* Progress */}
+          {busy && (
+            <Card padding={3} radius={2} border tone="primary">
+              <Stack space={2}>
+                <Flex align="center" gap={2}>
+                  <Spinner />
+                  <Text size={1}>{msg}</Text>
+                </Flex>
+                {phase === 'compressing' && progress > 0 && (
+                  <div style={{ background: 'var(--card-border-color)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                    <div style={{
+                      background:  'var(--card-focus-ring-color, #2276fc)',
+                      height:      '100%',
+                      width:       `${progress}%`,
+                      transition:  'width 0.3s ease',
+                    }} />
+                  </div>
+                )}
+              </Stack>
+            </Card>
+          )}
+
+          {/* Done */}
+          {phase === 'done' && (
+            <Card padding={3} radius={2} border tone="positive">
+              <Flex align="center" justify="space-between">
+                <Text size={1}>✅ Compressed video uploaded!</Text>
+                <Button text="Compress another" mode="ghost" tone="default" fontSize={1} padding={2} onClick={reset} />
+              </Flex>
+            </Card>
+          )}
+
+          {/* Error */}
+          {phase === 'error' && (
+            <Card padding={3} radius={2} border tone="critical">
+              <Stack space={2}>
+                <Text size={1}>❌ {errMsg}</Text>
+                <Button
+                  text="Try again"
+                  mode="ghost"
+                  tone="default"
+                  onClick={() => { setErrMsg(''); setPhase('idle') }}
+                />
+              </Stack>
+            </Card>
+          )}
+
+        </Stack>
+      </Card>
+
+    </Stack>
+  )
+}

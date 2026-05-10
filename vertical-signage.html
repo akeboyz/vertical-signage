@@ -354,10 +354,11 @@
         /* ==================== UPDATE POPUP (Building Updates) ==================== */
         .update-popup-label { font-size: 1.4vh; font-weight: 700; color: #C4682D; letter-spacing: 0.2vh; text-transform: uppercase; }
         .update-popup-image {
-            width: 100%; height: 24vh; border-radius: 2vh; overflow: hidden;
+            width: 100%; min-height: 24vh; max-height: 50vh; border-radius: 2vh; overflow: hidden;
             display: flex; align-items: center; justify-content: center; font-size: 6vh; flex-shrink: 0;
+            background: #101808;
         }
-        .update-popup-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .update-popup-image img { width: 100%; height: auto; max-height: 50vh; object-fit: contain; display: block; }
         .update-popup-title { font-size: 2.5vh; font-weight: 700; color: #fff; }
         .update-popup-subtitle { font-size: 1.75vh; color: #C4682D; font-weight: 600; }
         .update-popup-body { font-size: 1.65vh; color: rgba(255,255,255,0.72); line-height: 1.65; }

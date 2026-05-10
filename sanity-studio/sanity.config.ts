@@ -18,13 +18,18 @@ import { ImportFromContractAction }      from './actions/ImportFromContractActio
 import { GenerateView }         from './views/GenerateView'
 import { ApprovalView }         from './views/ApprovalView'
 import { ActivityView }         from './views/ActivityView'
-import { InstallationOverview } from './views/InstallationOverview'
+import { InstallationOverview }  from './views/InstallationOverview'
+import { AssetRegisterView }     from './components/AssetRegisterView'
+import { AssetRegisterListPane } from './components/AssetRegisterListPane'
 import { PartyOverview }        from './views/PartyOverview'
 import { LeadOverview }              from './views/LeadOverview'
 import { SaleOpportunityOverview }  from './views/SaleOpportunityOverview'
 import { dataImportPlugin }     from './plugins/data-import'
-import { PlaylistView }         from './views/PlaylistView'
-import { DirectoryView }        from './views/DirectoryView'
+import { PlaylistView }            from './views/PlaylistView'
+import { DirectoryView }           from './views/DirectoryView'
+import { FinancialStatementView }  from './components/FinancialStatementView'
+import { FiscalYearListPane }      from './components/FiscalYearListPane'
+import { LedgerListPane }          from './components/LedgerListPane'
 import { HowToTool }            from './tools/HowToTool'
 import { DashboardTool }        from './tools/DashboardTool'
 import { PartyMigrationTool }   from './tools/PartyMigrationTool'
@@ -129,6 +134,18 @@ export default defineConfig({
             S.view.component(ActivityView).id('activity').title('Activity'),
           ])
         }
+        if (schemaType === 'financialStatement') {
+          return S.document().views([
+            S.view.component(FinancialStatementView).id('fs-view').title('Statements'),
+            S.view.form().id('edit').title('Settings'),
+          ])
+        }
+        if (schemaType === 'assetRegister') {
+          return S.document().views([
+            S.view.component(AssetRegisterView).id('register').title('Asset Register'),
+            S.view.form().id('edit').title('Settings'),
+          ])
+        }
         if (schemaType === 'installation') {
           return S.document().views([
             S.view.component(InstallationOverview).id('overview').title('Overview'),
@@ -203,34 +220,45 @@ export default defineConfig({
           ]),
 
           // ── CRM ────────────────────────────────────────────────────────────
-          (can('party') || can('lead') || can('saleOpportunity')) &&
+          (can('party') || can('lead') || can('saleOpportunity') || can('emailCampaign')) &&
           group('crm', 'CRM', '👥', [
             can('party')           && S.documentTypeListItem('party').title('Parties'),
             can('lead')            && S.documentTypeListItem('lead').title('Leads'),
             can('saleOpportunity') && S.documentTypeListItem('saleOpportunity').title('Sale Opportunities'),
+            can('emailCampaign')   && S.documentTypeListItem('emailCampaign').title('Email Campaigns'),
           ]),
 
           // ── Projects ───────────────────────────────────────────────────────
-          (can('projectSite') || can('contract') || can('contractManagement') || can('serviceContract') || can('installation') || can('asset')) &&
+          (can('projectSite') || can('contract') || can('serviceContract') || can('installation') || can('asset') || can('assetRegister')) &&
           group('projects', 'Projects', '🏗', [
             can('projectSite')        && S.documentTypeListItem('projectSite').title('Project Sites'),
             can('contract')           && S.documentTypeListItem('contract').title('Rent Space').child(
               S.documentTypeList('contract').title('Rent Space').defaultOrdering([{ field: 'quotationNumber', direction: 'desc' }])
             ),
-            can('contractManagement') && S.documentTypeListItem('contractManagement').title('Contract Management'),
             can('serviceContract')    && S.documentTypeListItem('serviceContract').title('Service Contracts'),
             S.divider(),
             can('installation')       && S.documentTypeListItem('installation').title('Install & Activate'),
             can('asset')              && S.documentTypeListItem('asset').title('Assets'),
+            can('assetRegister')      && S.listItem().title('Asset Register').id('asset-register-pane').child(
+              S.component(AssetRegisterListPane).id('asset-register-list').title('Asset Register')
+            ),
           ]),
 
           // ── Finance ────────────────────────────────────────────────────────
-          (can('payment') || can('procurement') || isAdmin) &&
+          (can('payment') || can('procurement') || can('receipt') || can('funding') || can('journalEntry') || can('ledger') || can('financialStatement')) &&
           group('finance', 'Finance', '💰', [
-            isAdmin                  && S.documentTypeListItem('accountCode').title('Account Codes'),
-            S.divider(),
             can('payment')           && S.documentTypeListItem('payment').title('Payments'),
             can('procurement')       && S.documentTypeListItem('procurement').title('Procurements'),
+            can('receipt')           && S.documentTypeListItem('receipt').title('Receipts'),
+            can('funding')           && S.documentTypeListItem('funding').title('Funding'),
+            S.divider(),
+            can('journalEntry')       && S.documentTypeListItem('journalEntry').title('Journal Entries'),
+            can('ledger')             && S.listItem().title('General Ledger').id('gl-pane').child(
+              S.component(LedgerListPane).id('gl-list').title('General Ledger')
+            ),
+            can('financialStatement') && S.listItem().title('Financial Statements').id('fs-pane').child(
+              S.component(FiscalYearListPane).id('fs-year-select').title('Select Period')
+            ),
           ]),
 
           // ── Approvals ──────────────────────────────────────────────────────
@@ -243,9 +271,13 @@ export default defineConfig({
           ]),
 
           // ── Operations ─────────────────────────────────────────────────────
-          can('contractType') &&
+          (can('contractType') || isAdmin) &&
           group('operations', 'Operations', '⚙️', [
             can('contractType') && S.documentTypeListItem('contractType').title('Process Setup'),
+            S.divider(),
+            isAdmin && S.documentTypeListItem('accountCode').title('Account Codes'),
+            isAdmin && S.documentTypeListItem('accountCodeGroup').title('Account Code Groups'),
+            isAdmin && S.documentTypeListItem('fiscalYearConfig').title('Fiscal Year Config'),
           ]),
 
           // ── Admin only ─────────────────────────────────────────────────────

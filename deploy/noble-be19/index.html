@@ -764,6 +764,7 @@ async function loadBuildingUpdates() {
             description:   n.offer?.description_th ?? n.description ?? '',
             subCategoryIds: n.offer?.subCategories ?? n.subCategoryIds ?? [],
             url:           n.url ?? '',
+            image:         n.posterImage ?? n.offer?.primaryImage ?? null,
         };
     }
 
@@ -786,6 +787,7 @@ async function loadBuildingUpdates() {
                    ] | order(_createdAt desc){
             title,
             "url": coalesce(videoFile.asset->url, imageFile.asset->url),
+            "posterImage": posterImage.asset->url,
             "offer": offer->{ "slug": slug.current, title_th, subCategories, shortDesc_th, description_th }
         }`;
         const results = await sanityFetch(q);
