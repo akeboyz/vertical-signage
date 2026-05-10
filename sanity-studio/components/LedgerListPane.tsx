@@ -208,6 +208,15 @@ export function LedgerListPane() {
     [router, selectedFY],
   )
 
+  useEffect(() => {
+    if (!selectedFY) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setSelectedFY(null); setQuery(''); setType(''); setDepth('all') }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedFY])
+
   const printPDF = useCallback(() => {
     if (!selectedFY || rows.length === 0) return
 
@@ -291,7 +300,7 @@ export function LedgerListPane() {
   // ── Fiscal year list ─────────────────────────────────────────────────────
   if (!selectedFY) {
     return (
-      <Card tone="default" height="fill" style={{ display: 'flex', flexDirection: 'column', minWidth: 700 }}>
+      <Card tone="default" height="fill" style={{ display: 'flex', flexDirection: 'column' }}>
 
         {fyYears.length === 0 ? (
           <Flex align="center" justify="center" padding={6} style={{ flex: 1 }}>
@@ -327,7 +336,13 @@ export function LedgerListPane() {
 
   // ── Account list (fiscal year selected) ──────────────────────────────────
   return (
-    <Card tone="default" height="fill" style={{ display: 'flex', flexDirection: 'column', minWidth: 700 }}>
+    <Card tone="default" height="fill" style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      zIndex: 9999,
+      background: 'var(--card-bg-color)',
+      overflow: 'auto',
+      display: 'flex', flexDirection: 'column',
+    }}>
 
       {/* ── Toolbar ── */}
       <Box style={{ borderBottom: '1px solid var(--card-border-color)', flexShrink: 0 }}>
