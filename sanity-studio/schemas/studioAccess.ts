@@ -1,4 +1,5 @@
 import { defineField, defineType, defineArrayMember } from 'sanity'
+import { AllowedSchemasInput } from '../components/AllowedSchemasInput'
 
 /**
  * studioAccess — singleton document that controls which schemas
@@ -80,6 +81,7 @@ export default defineType({
               of:          [{ type: 'string' }],
               options:     { list: SCHEMA_OPTIONS, layout: 'grid' },
               description: 'Tick the sections this user is allowed to access.',
+              components:  { input: AllowedSchemasInput },
             }),
           ],
           preview: {

@@ -74,7 +74,6 @@ export default defineConfig({
 
   plugins: [
     accessControlPlugin(),
-    dashboardPlugin(),
     structureTool({
       // Every document opens in read-only Overview by default.
       // The user clicks the "Edit" tab to make changes.
@@ -229,7 +228,7 @@ export default defineConfig({
           ]),
 
           // ── Projects ───────────────────────────────────────────────────────
-          (can('projectSite') || can('contract') || can('serviceContract') || can('installation') || can('asset') || can('assetRegister')) &&
+          (can('projectSite') || can('contract') || can('serviceContract') || can('installation')) &&
           group('projects', 'Projects', '🏗', [
             can('projectSite')        && S.documentTypeListItem('projectSite').title('Project Sites'),
             can('contract')           && S.documentTypeListItem('contract').title('Rent Space').child(
@@ -238,14 +237,10 @@ export default defineConfig({
             can('serviceContract')    && S.documentTypeListItem('serviceContract').title('Service Contracts'),
             S.divider(),
             can('installation')       && S.documentTypeListItem('installation').title('Install & Activate'),
-            can('asset')              && S.documentTypeListItem('asset').title('Assets'),
-            can('assetRegister')      && S.listItem().title('Asset Register').id('asset-register-pane').child(
-              S.component(AssetRegisterListPane).id('asset-register-list').title('Asset Register')
-            ),
           ]),
 
           // ── Finance ────────────────────────────────────────────────────────
-          (can('payment') || can('procurement') || can('receipt') || can('funding') || can('journalEntry') || can('ledger') || can('financialStatement')) &&
+          (can('payment') || can('procurement') || can('receipt') || can('funding') || can('journalEntry') || can('asset') || can('assetRegister') || can('ledger') || can('financialStatement')) &&
           group('finance', 'Finance', '💰', [
             can('payment')           && S.documentTypeListItem('payment').title('Payments'),
             can('procurement')       && S.documentTypeListItem('procurement').title('Procurements'),
@@ -253,6 +248,10 @@ export default defineConfig({
             can('funding')           && S.documentTypeListItem('funding').title('Funding'),
             S.divider(),
             can('journalEntry')       && S.documentTypeListItem('journalEntry').title('Journal Entries'),
+            can('asset')              && S.documentTypeListItem('asset').title('Assets'),
+            can('assetRegister')      && S.listItem().title('Asset Register').id('asset-register-pane').child(
+              S.component(AssetRegisterListPane).id('asset-register-list').title('Asset Register')
+            ),
             can('ledger')             && S.listItem().title('General Ledger').id('gl-pane').child(
               S.component(LedgerListPane).id('gl-list').title('General Ledger')
             ),
@@ -298,6 +297,7 @@ export default defineConfig({
       },
     }),
 
+    dashboardPlugin(),
     dataImportPlugin(),
     howToPlugin(),
     visionTool(),
