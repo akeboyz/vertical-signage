@@ -413,6 +413,228 @@ export function FinancialStatementView(_props: any) {
     else exportBalanceSheet()
   }
 
+  // ── PDF Export ────────────────────────────────────────────────────────────
+
+  const printPDF = () => {
+    const esc = (s: string | null | undefined) =>
+      String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+    const tabLabel = tab === 'trial' ? 'Trial Balance' : tab === 'income' ? 'Income Statement' : 'Balance Sheet'
+    const tabSlug  = tab === 'trial' ? 'trial-balance' : tab === 'income' ? 'income-statement' : 'balance-sheet'
+
+    const activeFY   = fyYears.find(fy => fy.id === activeId)
+    const fySlug     = activeFY ? activeFY.label.replace(/\s+/g, '') : (to ? to.replace(/-/g, '') : 'all')
+    const filename   = `financial-statement-${tabSlug}-${fySlug}.pdf`
+
+    const periodStr  = activeFY ? activeFY.label : [from, to].filter(Boolean).join(' – ') || 'All periods'
+    const todayStr   = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' })
+    const langStr    = lang === 'th' ? 'ไทย' : 'English'
+    const depthStr   = leafOnly ? 'Leaf Only' : 'All Levels'
+
+    const IND = 16  // px indent per depth level
+
+    const thSt  = (align = 'left') => `background:#f0f0f0;padding:5px 9px;text-align:${align};font-size:9px;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #bbb;white-space:nowrap;font-weight:700;`
+    const tdSt  = (align = 'left', indent = 0) => `padding:4px 9px;padding-left:${9 + indent * IND}px;text-align:${align};font-size:10px;border-bottom:1px solid #eee;`
+    const grpSt = (indent = 0) => `padding:5px 9px;padding-left:${9 + indent * IND}px;font-size:10px;font-weight:700;background:#f5f5f5;border-bottom:1px solid #ddd;border-left:${indent === 0 ? '3px' : '2px'} solid #bbb;`
+    const totSt = (align = 'left') => `padding:5px 9px;text-align:${align};font-size:10px;font-weight:700;background:#f5f5f5;border-top:2px solid #bbb;border-bottom:2px solid #bbb;`
+    const gndSt = (align = 'left') => `padding:6px 9px;text-align:${align};font-size:11px;font-weight:700;background:#ececec;border-top:3px double #999;border-bottom:3px double #999;`
+    const secSt = () => `padding:8px 9px 3px;font-size:11px;font-weight:700;border-bottom:1px solid #ddd;`
+
+    // ── Trial Balance ──────────────────────────────────────────────────────
+    const buildTrialHTML = () => {
+      const TYPES = ['asset', 'liability', 'equity', 'revenue', 'expense']
+      const SUB: Record<string, string> = {
+        asset: 'Total Assets', liability: 'Total Liabilities',
+        equity: "Total Shareholders' Equity", revenue: 'Total Revenue', expense: 'Total Expenses',
+      }
+      let grandDr = 0, grandCr = 0
+      let rows = `<tr><th style="${thSt()}">Account</th><th style="${thSt('right')}">Debit (Dr)</th><th style="${thSt('right')}">Credit (Cr)</th></tr>`
+
+      for (const type of TYPES) {
+        const typeAccts = accounts.filter(a => a.type === type)
+        if (!typeAccts.length) continue
+        let typeDr = 0, typeCr = 0
+        rows += `<tr><td colspan="3" style="${secSt()}">${esc(TYPE_LABEL[type] ?? type)}</td></tr>`
+
+        for (const a of typeAccts) {
+          const b = balances.get(a.accountId); if (!b) continue
+          if (leafOnly && a.isParent) continue
+          const isDebitNormal = a.normalBalance !== 'credit'
+          const drBal = isDebitNormal ? Math.max(b.net, 0)  : Math.max(-b.net, 0)
+          const crBal = isDebitNormal ? Math.max(-b.net, 0) : Math.max(b.net, 0)
+          if (!a.isParent) { typeDr += drBal; typeCr += crBal }
+          const st = a.isParent ? grpSt(a.depth) : tdSt('left', a.depth)
+          rows += `<tr>
+            <td style="${st}"><span style="font-family:monospace">${esc(a.code)}</span> · <span style="color:#666">${esc(name(a))}</span></td>
+            <td style="${a.isParent ? grpSt() + 'text-align:right;' : tdSt('right')}">${drBal > 0 ? esc(fmt(drBal)) : '—'}</td>
+            <td style="${a.isParent ? grpSt() + 'text-align:right;' : tdSt('right')}">${crBal > 0 ? esc(fmt(crBal)) : '—'}</td>
+          </tr>`
+        }
+
+        rows += `<tr>
+          <td style="${totSt()}">${esc(SUB[type] ?? type)}</td>
+          <td style="${totSt('right')}">${esc(fmt(typeDr))}</td>
+          <td style="${totSt('right')}">${esc(fmt(typeCr))}</td>
+        </tr>`
+        grandDr += typeDr; grandCr += typeCr
+
+        if (type === 'equity') {
+          rows += `<tr>
+            <td style="${totSt()};font-style:italic">Total Liabilities &amp; Shareholders' Equity</td>
+            <td style="${totSt('right')}">${esc(fmt(grandDr))}</td>
+            <td style="${totSt('right')}">${esc(fmt(grandCr))}</td>
+          </tr>`
+        }
+      }
+
+      const balanced = Math.abs(grandDr - grandCr) < 0.01
+      rows += `<tr>
+        <td style="${gndSt()}">Grand Total</td>
+        <td style="${gndSt('right')}">${esc(fmt(grandDr))}</td>
+        <td style="${gndSt('right')}">${esc(fmt(grandCr))}</td>
+      </tr>
+      <tr><td colspan="3" style="padding:6px 9px;text-align:center;font-size:10px;font-weight:600;color:${balanced ? 'green' : 'red'}">
+        ${balanced ? '✓ Trial balance is balanced' : `⚠ Out of balance by ${esc(fmt(Math.abs(grandDr - grandCr)))}`}
+      </td></tr>`
+      return rows
+    }
+
+    // ── Income Statement ───────────────────────────────────────────────────
+    const buildIncomeHTML = () => {
+      const revenueAccts = accounts.filter(a => a.type === 'revenue')
+      const expenseAccts = accounts.filter(a => a.type === 'expense')
+      const totalRevenue = revenueAccts.filter(a => !a.isParent).reduce((s, a) => s + (incomeBalances.get(a.accountId)?.net ?? 0), 0)
+      const totalExpense = expenseAccts.filter(a => !a.isParent).reduce((s, a) => s + (incomeBalances.get(a.accountId)?.net ?? 0), 0)
+      const netIncome    = totalRevenue - totalExpense
+
+      const renderSec = (accts: LedgerAccount[]) => accts.map(a => {
+        const b = incomeBalances.get(a.accountId); if (!b) return ''
+        if (leafOnly && a.isParent) return ''
+        const st = a.isParent ? grpSt(a.depth) : tdSt('left', a.depth)
+        return `<tr>
+          <td style="${st}"><span style="font-family:monospace;margin-right:6px">${esc(a.code)}</span><span style="color:#666">${esc(name(a))}</span></td>
+          <td style="${a.isParent ? grpSt() + 'text-align:right;' : tdSt('right')}">${b.net !== 0 ? esc(fmt(b.net)) : '—'}</td>
+        </tr>`
+      }).join('')
+
+      let rows = `<tr><th style="${thSt()}">Account</th><th style="${thSt('right')}">Amount (THB)</th></tr>`
+      rows += `<tr><td colspan="2" style="${secSt()}">💰 Revenue</td></tr>`
+      rows += renderSec(revenueAccts)
+      rows += `<tr><td style="${totSt()}">Total Revenue</td><td style="${totSt('right')}">${esc(fmt(totalRevenue))}</td></tr>`
+      rows += `<tr><td colspan="2" style="${secSt()};padding-top:14px">💸 Expenses</td></tr>`
+      rows += renderSec(expenseAccts)
+      rows += `<tr><td style="${totSt()}">Total Expenses</td><td style="${totSt('right')}">${esc(fmt(totalExpense))}</td></tr>`
+      rows += `<tr style="background:${netIncome >= 0 ? 'rgba(0,160,0,0.08)' : 'rgba(200,0,0,0.08)'}">
+        <td style="${gndSt()}">${netIncome >= 0 ? '✅ Net Profit' : '⚠️ Net Loss'}</td>
+        <td style="${gndSt('right')}">${esc(fmt(Math.abs(netIncome)))}</td>
+      </tr>`
+      return rows
+    }
+
+    // ── Balance Sheet ──────────────────────────────────────────────────────
+    const buildBalanceHTML = () => {
+      const assetAccts  = accounts.filter(a => a.type === 'asset')
+      const liabAccts   = accounts.filter(a => a.type === 'liability')
+      const equityAccts = accounts.filter(a => a.type === 'equity')
+      const regCapAccts  = equityAccts.filter(a => regCapData.accountIds.has(a.accountId))
+      const paidUpEquity = equityAccts.filter(a => !regCapData.accountIds.has(a.accountId))
+
+      const sum = (accts: LedgerAccount[], catDr: boolean) =>
+        accts.filter(a => !a.isParent).reduce((s, a) => {
+          const net = balances.get(a.accountId)?.net ?? 0
+          return s + ((a.normalBalance !== 'credit') !== catDr ? -net : net)
+        }, 0)
+
+      const totalAssets = sum(assetAccts, true)
+      const totalLiab   = sum(liabAccts, false)
+      const totalEquity = sum(paidUpEquity, false)
+      const netIncome   =
+        accounts.filter(a => a.type === 'revenue' && !a.isParent).reduce((s, a) => s + (incomeBalances.get(a.accountId)?.net ?? 0), 0) -
+        accounts.filter(a => a.type === 'expense' && !a.isParent).reduce((s, a) => s + (incomeBalances.get(a.accountId)?.net ?? 0), 0)
+      const totalLE   = totalLiab + totalEquity + netIncome
+      const balanced  = Math.abs(totalAssets - totalLE) < 0.01
+
+      const renderSec = (accts: LedgerAccount[], catDr: boolean) => accts.map(a => {
+        const b = balances.get(a.accountId); if (!b) return ''
+        if (leafOnly && a.isParent) return ''
+        const isContra  = (a.normalBalance !== 'credit') !== catDr
+        const displayAmt = isContra ? -b.net : b.net
+        const st = a.isParent ? grpSt(a.depth) : tdSt('left', a.depth)
+        return `<tr>
+          <td style="${st}"><span style="font-family:monospace">${esc(a.code)}</span> · <span style="color:#666">${esc(name(a))}</span></td>
+          <td style="${a.isParent ? grpSt() + 'text-align:right;' : tdSt('right')}">${displayAmt !== 0 ? esc(fmt(displayAmt)) : '—'}</td>
+        </tr>`
+      }).join('')
+
+      let rows = `<tr><th style="${thSt()}">Account</th><th style="${thSt('right')}">Amount (THB)</th></tr>`
+
+      rows += `<tr><td colspan="2" style="${secSt()}">🏦 Assets</td></tr>`
+      rows += renderSec(assetAccts, true)
+      rows += `<tr><td style="${totSt()}">Total Assets</td><td style="${totSt('right')}">${esc(fmt(totalAssets))}</td></tr>`
+
+      rows += `<tr><td colspan="2" style="${secSt()};padding-top:14px">📋 Liabilities</td></tr>`
+      rows += renderSec(liabAccts, false)
+      rows += `<tr><td style="${totSt()}">Total Liabilities</td><td style="${totSt('right')}">${esc(fmt(totalLiab))}</td></tr>`
+
+      rows += `<tr><td colspan="2" style="${secSt()};padding-top:14px">📊 Equity</td></tr>`
+      rows += renderSec(paidUpEquity, false)
+      rows += `<tr><td style="${totSt()}">Total Equity</td><td style="${totSt('right')}">${esc(fmt(totalEquity))}</td></tr>`
+
+      if (regCapAccts.length > 0 || regCapData.amount != null) {
+        rows += `<tr><td colspan="2" style="${tdSt()};padding-top:10px;font-size:9px;font-style:italic;color:#888">ทุนจดทะเบียน · Authorised Capital — DBD (disclosure only, not in equity total)</td></tr>`
+        if (regCapAccts.length > 0) {
+          rows += regCapAccts.map(a => {
+            const b = balances.get(a.accountId); if (!b) return ''
+            const displayAmt = (a.normalBalance !== 'credit') ? -b.net : b.net
+            return `<tr style="opacity:.65"><td style="${tdSt('left', 1)};font-style:italic;color:#888">${esc(a.code)} · ${esc(name(a))}</td><td style="${tdSt('right')};font-style:italic;color:#888">${displayAmt !== 0 ? esc(fmt(displayAmt)) : '—'}</td></tr>`
+          }).join('')
+        } else if (regCapData.amount != null) {
+          rows += `<tr style="opacity:.65"><td style="${tdSt('left', 1)};font-style:italic;color:#888">ทุนจดทะเบียน (from Funding record)</td><td style="${tdSt('right')};font-style:italic;color:#888">${esc(fmt(regCapData.amount))}</td></tr>`
+        }
+      }
+
+      rows += `<tr><td colspan="2" style="${secSt()};padding-top:14px">📈 Net Income (current period)</td></tr>`
+      rows += `<tr><td style="${tdSt('left', 1)}">${netIncome >= 0 ? 'Net Profit' : 'Net Loss'}</td><td style="${tdSt('right')}">${esc(fmt(Math.abs(netIncome)))}</td></tr>`
+      rows += `<tr><td style="${totSt()};font-style:italic">Total Liabilities &amp; Shareholders' Equity</td><td style="${totSt('right')}">${esc(fmt(totalLE))}</td></tr>`
+      rows += `<tr style="background:${balanced ? 'rgba(0,160,0,0.08)' : 'rgba(200,0,0,0.08)'}"><td colspan="2" style="padding:6px 9px;text-align:center;font-size:10px;font-weight:600;color:${balanced ? 'green' : 'red'}">
+        ${balanced ? `✓ Balance sheet balances (Assets ${esc(fmt(totalAssets))} = L+E+NI ${esc(fmt(totalLE))})` : `⚠ Out of balance by ${esc(fmt(Math.abs(totalAssets - totalLE)))}`}
+      </td></tr>`
+      return rows
+    }
+
+    const tableRows = tab === 'trial' ? buildTrialHTML() : tab === 'income' ? buildIncomeHTML() : buildBalanceHTML()
+
+    const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>${esc(tabLabel)}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sarabun', Arial, sans-serif; font-size: 10px; color: #111; padding: 20px; }
+  h1   { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+  .meta { font-size: 9.5px; color: #555; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; }
+  @media print { @page { size: A4 portrait; margin: 12mm; } body { padding: 0; } }
+</style>
+</head><body>
+  <h1>${esc(tabLabel)}</h1>
+  <div class="meta">
+    Period: ${esc(periodStr)} &nbsp;·&nbsp;
+    Language: ${esc(langStr)} &nbsp;·&nbsp;
+    Depth: ${esc(depthStr)} &nbsp;·&nbsp;
+    Generated: ${esc(todayStr)}
+  </div>
+  <table><tbody>${tableRows}</tbody></table>
+</body></html>`
+
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(html)
+    win.document.close()
+    win.focus()
+    setTimeout(() => { win.document.title = filename; win.print() }, 400)
+  }
+
   // ── Trial Balance ─────────────────────────────────────────────────────────
 
   const renderTrialBalance = () => {
@@ -958,6 +1180,10 @@ export function FinancialStatementView(_props: any) {
               <Button text="⬇ Export CSV" mode="ghost" tone="default" fontSize={1} padding={2}
                 disabled={loading || accounts.length === 0}
                 onClick={exportCurrentTab}
+              />
+              <Button text="🖨 Print PDF" mode="ghost" tone="default" fontSize={1} padding={2}
+                disabled={loading || accounts.length === 0}
+                onClick={printPDF}
               />
             </Flex>
           </Flex>

@@ -208,6 +208,82 @@ export function LedgerListPane() {
     [router, selectedFY],
   )
 
+  const printPDF = useCallback(() => {
+    if (!selectedFY || rows.length === 0) return
+
+    const now = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    const typeLabel  = TYPE_OPTIONS.find(o => o.value === type)?.label ?? 'All'
+    const depthLabel = DEPTH_OPTIONS.find(o => o.value === depth)?.label ?? 'All Levels'
+    const fySlug     = selectedFY.label.replace(/\s+/g, '-')
+
+    const tableRows = rows.map(row => {
+      const net      = row.isParent ? rollupNet[row.accountId ?? ''] : leafNet[row.accountId ?? '']
+      const bal      = net !== undefined ? fmtBal(net) : '—'
+      const negStyle = net !== undefined && net < 0 ? ' color:#c00;' : ''
+      const bwStyle  = row.isParent ? 'font-weight:700;' : ''
+      const indentPx = depth === 'all' ? (row.depth ?? 0) * 18 : 0
+      const icon     = row.isParent ? (DEPTH_ICON[row.depth ?? 0] ?? '📂') : '&middot;'
+      const typeIcon = row.type ? TYPE_ICON[row.type] : ''
+      const attach   = row.hasFiles ? ' 📎' : ''
+      return `<tr>
+        <td style="padding-left:${indentPx + 4}px; white-space:nowrap; ${bwStyle}">${icon} ${row.code ?? ''}</td>
+        <td style="padding-left:4px; ${bwStyle}">${row.nameTh || row.nameEn || ''}${attach}</td>
+        <td style="text-align:right; font-family:monospace; ${bwStyle}${negStyle}">${bal}</td>
+        <td style="text-align:center; font-size:11px; opacity:0.6">${typeIcon}</td>
+      </tr>`
+    }).join('\n')
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>General Ledger — ${selectedFY.label}</title>
+<style>
+  @page { size: A4 portrait; margin: 18mm 14mm; }
+  body { font-family: 'Sarabun', 'Helvetica Neue', Arial, sans-serif; font-size: 11px; color: #1a1a1a; }
+  h2 { margin: 0 0 4px; font-size: 16px; }
+  .meta { color: #555; font-size: 10px; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f3f4f6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+       padding: 5px 6px; border-bottom: 2px solid #d1d5db; text-align: left; }
+  td { padding: 4px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+<h2>General Ledger</h2>
+<div class="meta">
+  Period: ${selectedFY.label} (${selectedFY.from} – ${selectedFY.to})
+  &nbsp;·&nbsp; Type: ${typeLabel}
+  &nbsp;·&nbsp; Level: ${depthLabel}
+  ${query ? `&nbsp;·&nbsp; Search: "${query}"` : ''}
+  &nbsp;·&nbsp; Generated: ${now}
+</div>
+<table>
+  <thead>
+    <tr>
+      <th style="width:100px">Code</th>
+      <th>Account Name</th>
+      <th style="width:110px; text-align:right">Balance</th>
+      <th style="width:32px; text-align:center">Type</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${tableRows}
+  </tbody>
+</table>
+</body>
+</html>`
+
+    const win = window.open('', '_blank', 'width=820,height=1060')
+    if (!win) return
+    win.document.write(html)
+    win.document.close()
+    win.document.title = `general-ledger-${fySlug}-${type || 'all'}-${depth}.pdf`
+    setTimeout(() => win.print(), 400)
+  }, [rows, selectedFY, leafNet, rollupNet, query, type, depth])
+
   // Indent only when showing all levels — visually conveys hierarchy
   const indent = (row: LedgerRow) =>
     depth === 'all' ? (row.depth ?? 0) * 14 : 0
@@ -271,6 +347,17 @@ export function LedgerListPane() {
             <Text size={1} weight="medium">{selectedFY.label}</Text>
           </Flex>
           <Text size={0} muted>{selectedFY.from} – {selectedFY.to}</Text>
+          <Box style={{ marginLeft: 'auto' }}>
+            <Button
+              mode="ghost"
+              fontSize={1}
+              padding={2}
+              text="🖨 Print PDF"
+              title="Print / Export PDF"
+              disabled={rows.length === 0}
+              onClick={printPDF}
+            />
+          </Box>
         </Flex>
 
         {/* Search */}
