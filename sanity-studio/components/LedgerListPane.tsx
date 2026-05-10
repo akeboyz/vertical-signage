@@ -8,14 +8,22 @@ import { useFiscalYears, FiscalYearOption } from '../hooks/useFiscalYears'
 const GL_FILTER_KEY = 'gl:periodFilter'
 
 interface LedgerRow {
-  _id:       string
-  code?:     string
-  nameTh?:   string
-  nameEn?:   string
-  type?:     string
-  depth?:    number
-  isParent?: boolean
+  _id:              string
+  code?:            string
+  nameTh?:          string
+  nameEn?:          string
+  type?:            string
+  depth?:           number
+  isParent?:        boolean
+  accountId?:       string
+  parentAccountId?: string
+  hasFiles?:        boolean
 }
+
+const fmtBal = (n: number): string =>
+  Math.abs(n) < 0.005
+    ? '—'
+    : Number(Math.abs(n)).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 const TYPE_OPTIONS = [
   { value: '',          label: 'All'           },
@@ -51,12 +59,14 @@ export function LedgerListPane() {
   const [selectedFY, setSelectedFY] = useState<FiscalYearOption | null>(null)
   const [fyHovered,  setFyHovered]  = useState<string | null>(null)
 
-  const [query,   setQuery]   = useState('')
-  const [type,    setType]    = useState('')
-  const [depth,   setDepth]   = useState<DepthFilter>('all')
-  const [rows,    setRows]    = useState<LedgerRow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [hovered, setHovered] = useState<string | null>(null)
+  const [query,     setQuery]     = useState('')
+  const [type,      setType]      = useState('')
+  const [depth,     setDepth]     = useState<DepthFilter>('all')
+  const [rows,      setRows]      = useState<LedgerRow[]>([])
+  const [loading,   setLoading]   = useState(true)
+  const [hovered,   setHovered]   = useState<string | null>(null)
+  const [leafNet,   setLeafNet]   = useState<Record<string, number>>({})
+  const [rollupNet, setRollupNet] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (!selectedFY) { setRows([]); setLoading(false); return }
@@ -90,8 +100,11 @@ export function LedgerListPane() {
       "code":     coalesce(codeCache, accountCode->code),
       "nameTh":   accountCode->nameTh,
       "nameEn":   accountCode->nameEn,
-      "type":     accountCode->type,
-      "isParent": accountCode->isParent,
+      "type":            accountCode->type,
+      "isParent":        accountCode->isParent,
+      "accountId":       accountCode._ref,
+      "parentAccountId": accountCode->parentCode._ref,
+      "hasFiles":        count(supportingDocs) > 0,
       "depth": select(
         !defined(accountCode->parentCode._ref)                                        => 0,
         !defined(accountCode->parentCode->parentCode._ref)                            => 1,
@@ -107,6 +120,70 @@ export function LedgerListPane() {
 
     return () => { cancelled = true }
   }, [selectedFY, query, type, depth, client])
+
+  // Fetch period transactions + build parent→leaf rollup whenever FY changes
+  useEffect(() => {
+    if (!selectedFY) { setLeafNet({}); setRollupNet({}); return }
+    let cancelled = false
+
+    client
+      .fetch<{
+        pmData: { accountId: string; parentAccountId?: string }[]
+        txns:   { lines: { accountId: string; dr: number; cr: number }[] }[]
+      }>(
+        `{
+          "pmData": *[_type == "ledger" && !(_id in path("drafts.**"))] {
+            "accountId":       accountCode._ref,
+            "parentAccountId": accountCode->parentCode._ref
+          },
+          "txns": *[
+            _type in ["payment","receipt","funding","procurement","journalEntry"]
+            && accountingEntry.glStatus == "posted"
+            && accountingEntry.entryDate >= $from
+            && accountingEntry.entryDate <= $to
+            && !(_id in path("drafts.**"))
+          ] {
+            "lines": accountingEntry.lines[] {
+              "accountId": accountCode._ref,
+              "dr": coalesce(debitAmount, 0),
+              "cr": coalesce(creditAmount, 0)
+            }
+          }
+        }`,
+        { from: selectedFY.from, to: selectedFY.to }
+      )
+      .then(({ pmData, txns }) => {
+        if (cancelled) return
+
+        // parentMap: accountCode._id → parent accountCode._id
+        const parentMap: Record<string, string> = {}
+        for (const r of pmData) {
+          if (r.accountId && r.parentAccountId) parentMap[r.accountId] = r.parentAccountId
+        }
+
+        // leaf net: accountCode._id → (totalDr − totalCr) for the period
+        const leaf: Record<string, number> = {}
+        for (const doc of txns) {
+          for (const line of (doc.lines ?? [])) {
+            if (!line.accountId) continue
+            leaf[line.accountId] = (leaf[line.accountId] ?? 0) + (line.dr ?? 0) - (line.cr ?? 0)
+          }
+        }
+
+        // rollup: walk up from each leaf and accumulate balance into every ancestor
+        const rollup: Record<string, number> = {}
+        for (const [accountId, balance] of Object.entries(leaf)) {
+          let cur = parentMap[accountId]
+          while (cur) { rollup[cur] = (rollup[cur] ?? 0) + balance; cur = parentMap[cur] }
+        }
+
+        setLeafNet(leaf)
+        setRollupNet(rollup)
+      })
+      .catch(() => {})
+
+    return () => { cancelled = true }
+  }, [selectedFY, client])
 
   const open = useCallback(
     (id: string) => {
@@ -287,12 +364,35 @@ export function LedgerListPane() {
                   {row.nameTh || row.nameEn}
                 </span>
 
-                {/* Type icon — right-aligned */}
-                {row.type && (
-                  <span style={{ marginLeft: 'auto', fontSize: 11, flexShrink: 0, opacity: 0.45 }}>
-                    {TYPE_ICON[row.type]}
-                  </span>
-                )}
+                {/* Right cluster: 📎 · balance · type icon */}
+                <Flex align="center" gap={1} style={{ marginLeft: 'auto', flexShrink: 0 }}>
+                  {row.hasFiles && (
+                    <span style={{ fontSize: 10, flexShrink: 0 }} title="Has supporting documents">📎</span>
+                  )}
+                  {selectedFY && (() => {
+                    const net   = row.isParent ? rollupNet[row.accountId ?? ''] : leafNet[row.accountId ?? '']
+                    const label = net !== undefined ? fmtBal(net) : '—'
+                    return (
+                      <span style={{
+                        fontFamily: 'monospace',
+                        fontSize:   row.isParent ? 12 : 11,
+                        fontWeight: row.isParent ? 700 : 400,
+                        color:      label === '—' ? 'var(--card-muted-fg-color)' : 'inherit',
+                        opacity:    label === '—' ? 0.35 : 1,
+                        minWidth:   72,
+                        textAlign:  'right',
+                        flexShrink: 0,
+                      }}>
+                        {label}
+                      </span>
+                    )
+                  })()}
+                  {row.type && (
+                    <span style={{ fontSize: 11, flexShrink: 0, opacity: 0.45, marginLeft: 2 }}>
+                      {TYPE_ICON[row.type]}
+                    </span>
+                  )}
+                </Flex>
               </Flex>
             </Box>
           ))}
