@@ -113,6 +113,47 @@ function getInitialAccountFilter(): string | null {
   return null
 }
 
+const STATUS_TO_PARAM: Record<string, string> = {
+  in_storage:     'in-storage',
+  installed:      'installed',
+  under_repair:   'under-repair',
+  decommissioned: 'decommissioned',
+  returned:       'returned',
+}
+const PARAM_TO_STATUS: Record<string, string> = {
+  'in-storage':     'in_storage',
+  'installed':      'installed',
+  'under-repair':   'under_repair',
+  'decommissioned': 'decommissioned',
+  'returned':       'returned',
+}
+const ACTIVE_STATUS_SET = new Set(['in_storage', 'installed', 'under_repair'])
+const ALL_STATUS_SET    = new Set(['in_storage', 'installed', 'under_repair', 'decommissioned', 'returned'])
+
+function getInitialARFromURL(): {
+  fyYear:   string
+  asOf:     string
+  account:  string
+  statuses: Set<string> | null
+} {
+  try {
+    const p = new URLSearchParams(window.location.search)
+    const statusRaw = p.get('status') ?? ''
+    let statuses: Set<string> | null = null
+    if      (statusRaw === 'all')                          statuses = new Set(ALL_STATUS_SET)
+    else if (statusRaw === 'active')                       statuses = new Set(ACTIVE_STATUS_SET)
+    else if (statusRaw && PARAM_TO_STATUS[statusRaw])      statuses = new Set([PARAM_TO_STATUS[statusRaw]])
+    return {
+      fyYear:  p.get('fy')      ?? '',
+      asOf:    p.get('asof')    ?? '',
+      account: p.get('account') ?? '',
+      statuses,
+    }
+  } catch {
+    return { fyYear: '', asOf: '', account: '', statuses: null }
+  }
+}
+
 export function AssetRegisterView(_props: any) {
   const client  = useClient({ apiVersion: '2024-01-01' })
   const fyYears = useFiscalYears()
@@ -120,15 +161,19 @@ export function AssetRegisterView(_props: any) {
   const ALL_STATUSES    = ['in_storage', 'installed', 'under_repair', 'decommissioned', 'returned']
   const ACTIVE_STATUSES = new Set(['in_storage', 'installed', 'under_repair'])
 
+  const [initURL] = useState(getInitialARFromURL)
   const [{ from: initFrom, to: initTo, activeId: initActiveId }] = useState(getInitialPeriod)
   const [activeId,           setActiveId]           = useState(initActiveId)
   const [from,               setFrom]               = useState(initFrom)
-  const [to,                 setTo]                 = useState(initTo)
+  const [to,                 setTo]                 = useState(initURL.asOf || initTo)
   const [assets,             setAssets]             = useState<AssetRow[]>([])
   const [loading,            setLoading]            = useState(true)
-  const [selectedStatuses,   setSelectedStatuses]   = useState<Set<string>>(new Set(ACTIVE_STATUSES))
-  const [accountCodeFilterRef, setAccountCodeFilterRef] = useState<string | null>(getInitialAccountFilter)
+  const [selectedStatuses,   setSelectedStatuses]   = useState<Set<string>>(initURL.statuses ?? new Set(ACTIVE_STATUSES))
+  const [accountCodeFilterRef, setAccountCodeFilterRef] = useState<string | null>(
+    () => initURL.account || getInitialAccountFilter()
+  )
   const [accountCodes,         setAccountCodes]         = useState<{ _id: string; parentId: string | null; code: string | null; nameTh: string | null; nameEn: string | null }[]>([])
+  const [targetFyYear,         setTargetFyYear]         = useState(initURL.fyYear)
 
   const toggleStatus = (s: string) =>
     setSelectedStatuses(prev => {
@@ -157,6 +202,48 @@ export function AssetRegisterView(_props: any) {
       .subscribe(event => { if (event.type === 'mutation') load() })
     return () => sub.unsubscribe()
   }, [load]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Resolve ?fy=YYYY → activeId once fyYears has loaded
+  // (skipped if localStorage handoff already pre-set activeId)
+  useEffect(() => {
+    if (!targetFyYear || activeId || fyYears.length === 0) return
+    const match = fyYears.find(fy => fy.from.startsWith(targetFyYear))
+    if (match) {
+      setActiveId(match.id)
+      setFrom(match.from)
+      if (!initURL.asOf) setTo(match.to)   // don't overwrite asof if URL had it
+    }
+    setTargetFyYear('')
+  }, [fyYears, targetFyYear, activeId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync filter state → URL query params (no page reload, defaults not written)
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams()
+      const fyMatch = fyYears.find(fy => fy.id === activeId)
+      if (fyMatch)                                      p.set('fy',   fyMatch.from.slice(0, 4))
+      if (to && (!fyMatch || to !== fyMatch.to))        p.set('asof', to)
+
+      const sel          = Array.from(selectedStatuses).sort().join(',')
+      const activeSorted = Array.from(ACTIVE_STATUS_SET).sort().join(',')
+      const allSorted    = Array.from(ALL_STATUS_SET).sort().join(',')
+      if      (sel === allSorted)                       p.set('status', 'all')
+      else if (sel === activeSorted)                    { /* default — omit */ }
+      else if (selectedStatuses.size === 1) {
+        const only = Array.from(selectedStatuses)[0]
+        if (STATUS_TO_PARAM[only]) p.set('status', STATUS_TO_PARAM[only])
+      }
+      // else: custom mix — not representable per URL spec, skip
+
+      if (accountCodeFilterRef) p.set('account', accountCodeFilterRef)
+
+      const qs  = p.toString()
+      const url = qs
+        ? `${window.location.pathname}?${qs}${window.location.hash}`
+        : `${window.location.pathname}${window.location.hash}`
+      window.history.replaceState(null, '', url)
+    } catch {}
+  }, [activeId, to, selectedStatuses, accountCodeFilterRef, fyYears])
 
   useEffect(() => {
     client
