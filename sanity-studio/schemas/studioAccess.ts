@@ -32,7 +32,8 @@ const SCHEMA_OPTIONS = [
   { title: '💰 Funding',                value: 'funding'          },
   { title: '📦 Procurements',           value: 'procurement'      },
   { title: '📒 Journal Entries',        value: 'journalEntry'     },
-  { title: '🖥  Asset Registration',     value: 'asset'            },
+  { title: '🏷  Assets',                 value: 'asset'            },
+  { title: '📋 Asset Register',         value: 'assetRegister'    },
   { title: '📊 General Ledger',         value: 'ledger'           },
   { title: '📈 Financial Statements',   value: 'financialStatement' },
   // ── Approvals ────────────────────────────────────────────────────────────
