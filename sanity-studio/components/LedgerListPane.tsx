@@ -338,7 +338,7 @@ export function LedgerListPane() {
   return (
     <Card tone="default" height="fill" style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      zIndex: 9999,
+      zIndex: 999999,
       background: 'var(--card-bg-color)',
       overflow: 'auto',
       display: 'flex', flexDirection: 'column',
@@ -479,23 +479,21 @@ export function LedgerListPane() {
                   {row.nameTh || row.nameEn}
                 </span>
 
-                {/* Asset Register shortcut */}
-                {row.linkedSchedule === 'asset_register' && row.accountId && (
-                  <button
-                    onClick={e => { e.stopPropagation(); navigateToAR(row.accountId!) }}
-                    title="View in Asset Register"
-                    style={{
-                      background: 'none', border: 'none', padding: '0 2px',
-                      cursor: 'pointer', fontSize: 11, flexShrink: 0,
-                      opacity: 0.55, lineHeight: 1,
-                    }}
-                  >
-                    🔍
-                  </button>
-                )}
-
-                {/* Right cluster: 📎 · balance · type icon */}
+                {/* Right cluster: 🔍 · 📎 · balance · type icon */}
                 <Flex align="center" gap={1} style={{ marginLeft: 'auto', flexShrink: 0 }}>
+                  {row.linkedSchedule === 'asset_register' && row.accountId && (
+                    <button
+                      onClick={e => { e.stopPropagation(); navigateToAR(row.accountId!) }}
+                      title="View in Asset Register"
+                      style={{
+                        background: 'none', border: 'none', padding: '0 2px',
+                        cursor: 'pointer', fontSize: 11, flexShrink: 0,
+                        opacity: 0.55, lineHeight: 1,
+                      }}
+                    >
+                      🔍
+                    </button>
+                  )}
                   {row.hasFiles && (
                     <span style={{ fontSize: 10, flexShrink: 0 }} title="Has supporting documents">📎</span>
                   )}
