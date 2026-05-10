@@ -91,7 +91,8 @@ export function LedgerListPane() {
   const [depth,     setDepth]     = useState<DepthFilter>(initDepth)
   const [rows,      setRows]      = useState<LedgerRow[]>([])
   const [loading,   setLoading]   = useState(true)
-  const [hovered,   setHovered]   = useState<string | null>(null)
+  const [hovered,     setHovered]     = useState<string | null>(null)
+  const [hoveredLink, setHoveredLink] = useState<string | null>(null)
   const [leafNet,   setLeafNet]   = useState<Record<string, number>>({})
   const [rollupNet, setRollupNet] = useState<Record<string, number>>({})
 
@@ -157,12 +158,18 @@ export function LedgerListPane() {
     client
       .fetch<{
         pmData: { accountId: string; parentAccountId?: string }[]
+        bfData: { accountId: string; bfDr: number; bfCr: number }[]
         txns:   { lines: { accountId: string; dr: number; cr: number }[] }[]
       }>(
         `{
-          "pmData": *[_type == "ledger" && !(_id in path("drafts.**"))] {
-            "accountId":       accountCode._ref,
-            "parentAccountId": accountCode->parentCode._ref
+          "pmData": *[_type == "accountCode"] {
+            "accountId":       _id,
+            "parentAccountId": parentCode._ref
+          },
+          "bfData": *[_type == "ledger" && !(_id in path("drafts.**"))] {
+            "accountId": accountCode._ref,
+            "bfDr":      coalesce(broughtForwardDebit, 0),
+            "bfCr":      coalesce(broughtForwardCredit, 0)
           },
           "txns": *[
             _type in ["payment","receipt","funding","procurement","journalEntry"]
@@ -180,17 +187,26 @@ export function LedgerListPane() {
         }`,
         { from: selectedFY.from, to: selectedFY.to }
       )
-      .then(({ pmData, txns }) => {
+      .then(({ pmData, bfData, txns }) => {
         if (cancelled) return
 
-        // parentMap: accountCode._id → parent accountCode._id
+        console.log('[GL] pmData rows:', pmData.length)
+        console.log('[GL] bfData rows:', bfData.length, 'sample first 5:', bfData.slice(0, 5))
+        console.log('[GL] bfData with non-zero BF:', bfData.filter(r => (r.bfDr ?? 0) !== 0 || (r.bfCr ?? 0) !== 0).length)
+        console.log('[GL] txns docs:', txns.length)
+
+        // parentMap: accountCode._id → parent accountCode._id (full chart of accounts)
         const parentMap: Record<string, string> = {}
         for (const r of pmData) {
           if (r.accountId && r.parentAccountId) parentMap[r.accountId] = r.parentAccountId
         }
 
-        // leaf net: accountCode._id → (totalDr − totalCr) for the period
+        // leaf closing balance: accountCode._id → (BF + period net), debit-positive
         const leaf: Record<string, number> = {}
+        for (const r of bfData) {
+          if (!r.accountId) continue
+          leaf[r.accountId] = (r.bfDr ?? 0) - (r.bfCr ?? 0)
+        }
         for (const doc of txns) {
           for (const line of (doc.lines ?? [])) {
             if (!line.accountId) continue
@@ -237,7 +253,7 @@ export function LedgerListPane() {
     } catch {}
   }, [selectedFY, type, depth, query])
 
-  const open = useCallback(
+  const openOverview = useCallback(
     (id: string) => {
       if (selectedFY) {
         localStorage.setItem(GL_FILTER_KEY, JSON.stringify({ from: selectedFY.from, to: selectedFY.to, activeId: selectedFY.id }))
@@ -245,6 +261,21 @@ export function LedgerListPane() {
       router.navigateIntent('edit', { id: id.replace(/^drafts\./, ''), type: 'ledger' })
     },
     [router, selectedFY],
+  )
+
+  const openStatement = useCallback(
+    (id: string) => {
+      if (selectedFY) {
+        localStorage.setItem(GL_FILTER_KEY, JSON.stringify({ from: selectedFY.from, to: selectedFY.to, activeId: selectedFY.id }))
+      }
+      const cleanId  = id.replace(/^drafts\./, '')
+      const base     = window.location.origin +
+        (window.location.pathname.includes('/structure')
+          ? window.location.pathname.split('/structure')[0]
+          : '')
+      window.location.href = `${base}/intent/edit/id=${cleanId};type=ledger;view=edit`
+    },
+    [selectedFY],
   )
 
   const navigateToAR = useCallback(
@@ -496,7 +527,7 @@ export function LedgerListPane() {
           {rows.map(row => (
             <Box
               key={row._id}
-              onClick={() => open(row._id)}
+              onClick={() => openOverview(row._id)}
               onMouseEnter={() => setHovered(row._id)}
               onMouseLeave={() => setHovered(null)}
               style={{
@@ -513,19 +544,33 @@ export function LedgerListPane() {
                   : <span style={{ fontSize: 10, flexShrink: 0, opacity: 0.35 }}>·</span>
                 }
 
-                {/* Code */}
-                <span style={{
-                  fontFamily: 'monospace', fontSize: 12, fontWeight: 600,
-                  flexShrink: 0, color: row.isParent ? undefined : 'var(--card-muted-fg-color)',
-                }}>
+                {/* Code — clicks to statement view */}
+                <span
+                  onClick={e => { e.stopPropagation(); openStatement(row._id) }}
+                  onMouseEnter={() => setHoveredLink(`${row._id}:code`)}
+                  onMouseLeave={() => setHoveredLink(null)}
+                  style={{
+                    fontFamily: 'monospace', fontSize: 12, fontWeight: 600, flexShrink: 0,
+                    color: '#3b82f6',
+                    cursor: 'pointer',
+                    textDecoration: hoveredLink === `${row._id}:code` ? 'underline' : 'none',
+                  }}
+                >
                   {row.code}
                 </span>
 
-                {/* Name */}
-                <span style={{
-                  fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  color: row.isParent ? undefined : 'var(--card-muted-fg-color)',
-                }}>
+                {/* Name — clicks to statement view */}
+                <span
+                  onClick={e => { e.stopPropagation(); openStatement(row._id) }}
+                  onMouseEnter={() => setHoveredLink(`${row._id}:name`)}
+                  onMouseLeave={() => setHoveredLink(null)}
+                  style={{
+                    fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    color: '#3b82f6',
+                    cursor: 'pointer',
+                    textDecoration: hoveredLink === `${row._id}:name` ? 'underline' : 'none',
+                  }}
+                >
                   {row.nameTh || row.nameEn}
                 </span>
 
@@ -545,7 +590,16 @@ export function LedgerListPane() {
                     </button>
                   )}
                   {row.hasFiles && (
-                    <span style={{ fontSize: 10, flexShrink: 0 }} title="Has supporting documents">📎</span>
+                    <button
+                      onClick={e => { e.stopPropagation(); openOverview(row._id) }}
+                      title="Open supporting documents"
+                      style={{
+                        background: 'none', border: 'none', padding: '0 2px',
+                        cursor: 'pointer', fontSize: 10, flexShrink: 0, lineHeight: 1,
+                      }}
+                    >
+                      📎
+                    </button>
                   )}
                   {selectedFY && (() => {
                     const net   = row.isParent ? rollupNet[row.accountId ?? ''] : leafNet[row.accountId ?? '']

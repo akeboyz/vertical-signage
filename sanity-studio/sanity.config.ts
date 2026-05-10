@@ -30,6 +30,7 @@ import { DirectoryView }           from './views/DirectoryView'
 import { FinancialStatementView }  from './components/FinancialStatementView'
 import { FiscalYearListPane }      from './components/FiscalYearListPane'
 import { LedgerListPane }          from './components/LedgerListPane'
+import { LedgerOverview }         from './components/LedgerOverview'
 import { HowToTool }            from './tools/HowToTool'
 import { DashboardTool }        from './tools/DashboardTool'
 import { PartyMigrationTool }   from './tools/PartyMigrationTool'
@@ -160,6 +161,12 @@ export default defineConfig({
             S.view.form().id('edit').title('Edit'),
             S.view.component(DirectoryView).id('directory').title('Directory'),
             S.view.component(ActivityView).id('activity').title('Activity'),
+          ])
+        }
+        if (schemaType === 'ledger') {
+          return S.document().views([
+            S.view.component(LedgerOverview).id('overview').title('Overview'),
+            S.view.form().id('edit').title('Edit'),
           ])
         }
         return S.document().views([

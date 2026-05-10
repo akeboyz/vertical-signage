@@ -179,7 +179,7 @@ export function LedgerStatementView(_props: StringInputProps) {
       .catch(() => {})
   }, [accountId, client]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Children (only for parent accounts) ─────────────────────────────────────
+  // ── Leaf descendants (all depths) for parent accounts ───────────────────────
   const [childIds,  setChildIds]  = useState<string[]>([])
   const [childBFDr, setChildBFDr] = useState(0)
   const [childBFCr, setChildBFCr] = useState(0)
@@ -187,19 +187,49 @@ export function LedgerStatementView(_props: StringInputProps) {
   useEffect(() => {
     if (!isParent || !accountId) { setChildIds([]); setChildBFDr(0); setChildBFCr(0); return }
     let cancelled = false
+
+    // Fetch the full chart of accounts in one query, then find all leaf
+    // descendants client-side via BFS. This avoids multiple round-trips for
+    // deep trees while keeping the query simple.
     client
-      .fetch<{ _id: string }[]>(
-        `*[_type == "accountCode" && parentCode._ref == $id]{ _id }`,
-        { id: accountId }
+      .fetch<{ _id: string; parentId?: string; isParent?: boolean }[]>(
+        `*[_type == "accountCode"]{ _id, "parentId": parentCode._ref, isParent }`,
       )
-      .then(children => {
+      .then(allCodes => {
         if (cancelled) return
-        const ids = children.map(c => c._id)
-        setChildIds(ids)
-        if (ids.length === 0) return Promise.resolve([])
+
+        // Build parent → [child, ...] map
+        const childrenOf: Record<string, string[]> = {}
+        for (const c of allCodes) {
+          if (c.parentId) {
+            if (!childrenOf[c.parentId]) childrenOf[c.parentId] = []
+            childrenOf[c.parentId].push(c._id)
+          }
+        }
+
+        // BFS from accountId; collect nodes with no children (leaf descendants)
+        const leafIds: string[] = []
+        const queue   = [...(childrenOf[accountId] ?? [])]
+        const visited = new Set<string>()
+
+        while (queue.length > 0) {
+          const cur = queue.shift()!
+          if (visited.has(cur)) continue
+          visited.add(cur)
+          const kids = childrenOf[cur] ?? []
+          if (kids.length === 0) {
+            leafIds.push(cur)
+          } else {
+            queue.push(...kids)
+          }
+        }
+
+        setChildIds(leafIds)
+        if (leafIds.length === 0) { setChildBFDr(0); setChildBFCr(0); return }
+
         return client.fetch<{ broughtForwardDebit?: number; broughtForwardCredit?: number }[]>(
           `*[_type == "ledger" && !(_id in path("drafts.**")) && accountCode._ref in $ids]{ broughtForwardDebit, broughtForwardCredit }`,
-          { ids }
+          { ids: leafIds },
         )
       })
       .then(ledgers => {
@@ -208,6 +238,7 @@ export function LedgerStatementView(_props: StringInputProps) {
         setChildBFCr(ledgers.reduce((s, l) => s + (l.broughtForwardCredit ?? 0), 0))
       })
       .catch(() => {})
+
     return () => { cancelled = true }
   }, [isParent, accountId, client]) // eslint-disable-line react-hooks/exhaustive-deps
 
