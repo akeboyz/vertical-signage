@@ -182,20 +182,48 @@ function getInitialFSPeriod() {
   return { from: '', to: '', activeId: '' }
 }
 
+const TAB_TO_PARAM = { trial: 'trial-balance', income: 'income-statement', balance: 'balance-sheet' } as const
+const PARAM_TO_TAB: Record<string, 'trial' | 'income' | 'balance'> = {
+  'trial-balance': 'trial', 'income-statement': 'income', 'balance-sheet': 'balance',
+}
+
+function getInitialFSFromURL(): {
+  fyYear: string
+  tab:    'trial' | 'income' | 'balance' | null
+  lang:   'th' | 'en' | null
+  depth:  string | null
+} {
+  try {
+    const p = new URLSearchParams(window.location.search)
+    const langRaw = p.get('lang')
+    return {
+      fyYear: p.get('fy') ?? '',
+      tab:    PARAM_TO_TAB[p.get('type') ?? ''] ?? null,
+      lang:   langRaw === 'en' ? 'en' : langRaw === 'th' ? 'th' : null,
+      depth:  p.get('depth'),
+    }
+  } catch {
+    return { fyYear: '', tab: null, lang: null, depth: null }
+  }
+}
+
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export function FinancialStatementView(_props: any) {
   const client  = useClient({ apiVersion: '2024-01-01' })
   const fyYears = useFiscalYears()
-  const [lang,   setLang]   = useState<'th' | 'en'>('th')
 
-  const [tab, setTab] = useState<'trial' | 'income' | 'balance'>('trial')
+  const [initURL] = useState(getInitialFSFromURL)
+
+  const [lang, setLang] = useState<'th' | 'en'>(initURL.lang ?? 'th')
+  const [tab,  setTab]  = useState<'trial' | 'income' | 'balance'>(initURL.tab ?? 'trial')
 
   const [{ from: initFrom, to: initTo, activeId: initActiveId }] = useState(getInitialFSPeriod)
-  const [activeId, setActiveId] = useState(initActiveId)
-  const [from,     setFrom]     = useState(initFrom)
-  const [to,       setTo]       = useState(initTo)
-  const [leafOnly, setLeafOnly] = useState(false)
+  const [activeId,     setActiveId]     = useState(initActiveId)
+  const [from,         setFrom]         = useState(initFrom)
+  const [to,           setTo]           = useState(initTo)
+  const [leafOnly,     setLeafOnly]     = useState<boolean>(initURL.depth === 'leaf')
+  const [targetFyYear, setTargetFyYear] = useState(initURL.fyYear)
   const [loading,        setLoading]        = useState(false)
   const [accounts,       setAccounts]       = useState<LedgerAccount[]>([])
   const [balances,       setBalances]       = useState<Map<string, Balance>>(new Map())  // cumulative: BF + all txns up to 'to'
@@ -203,6 +231,32 @@ export function FinancialStatementView(_props: any) {
   const [regCapData,     setRegCapData]     = useState<{ amount: number | null; accountIds: Set<string> }>({ amount: null, accountIds: new Set() })
   const [supportingDocs, setSupportingDocs] = useState<SupportingDoc[]>([])
   const [hoveredDoc,     setHoveredDoc]     = useState<string | null>(null)
+
+  // Resolve ?fy=YYYY → activeId once fyYears has loaded
+  // (skipped if localStorage handoff already pre-set activeId)
+  useEffect(() => {
+    if (!targetFyYear || activeId || fyYears.length === 0) return
+    const match = fyYears.find(fy => fy.from.startsWith(targetFyYear))
+    if (match) { setActiveId(match.id); setFrom(match.from); setTo(match.to) }
+    setTargetFyYear('')
+  }, [fyYears, targetFyYear, activeId])
+
+  // Sync filter state → URL query params (no page reload, no defaults written)
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams()
+      const fyMatch = fyYears.find(fy => fy.id === activeId)
+      if (fyMatch)         p.set('fy',    fyMatch.from.slice(0, 4))
+      if (tab !== 'trial') p.set('type',  TAB_TO_PARAM[tab])
+      if (lang !== 'th')   p.set('lang',  lang)
+      if (leafOnly)        p.set('depth', 'leaf')
+      const qs  = p.toString()
+      const url = qs
+        ? `${window.location.pathname}?${qs}${window.location.hash}`
+        : `${window.location.pathname}${window.location.hash}`
+      window.history.replaceState(null, '', url)
+    } catch {}
+  }, [activeId, tab, lang, leafOnly, fyYears])
 
   const load = useCallback(async () => {
     if (!from && !to) {
