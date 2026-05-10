@@ -51,18 +51,44 @@ const TYPE_ICON: Record<string, string> = {
 
 const DEPTH_ICON: Record<number, string> = { 0: '📁', 1: '📂', 2: '📄' }
 
+const DEPTH_TO_PARAM: Record<DepthFilter, string> = {
+  all: 'all', leaf: 'leaf', depth2: 'sub-sub-group', depth1: 'sub-group', depth0: 'group',
+}
+const PARAM_TO_DEPTH: Record<string, DepthFilter> = {
+  all: 'all', leaf: 'leaf', 'sub-sub-group': 'depth2', 'sub-group': 'depth1', group: 'depth0',
+}
+
+function getInitialFromURL() {
+  try {
+    const p = new URLSearchParams(window.location.search)
+    const VALID_TYPES = ['', 'asset', 'liability', 'equity', 'revenue', 'expense']
+    return {
+      fyYear: p.get('fy')    ?? '',
+      type:   VALID_TYPES.includes(p.get('type') ?? '') ? (p.get('type') ?? '') : '',
+      depth:  PARAM_TO_DEPTH[p.get('depth') ?? ''] ?? 'all' as DepthFilter,
+      query:  p.get('q')     ?? '',
+    }
+  } catch {
+    return { fyYear: '', type: '', depth: 'all' as DepthFilter, query: '' }
+  }
+}
+
 export function LedgerListPane() {
   const client  = useClient({ apiVersion: '2024-01-01' })
   const router  = useRouter()
   const fyYears = useFiscalYears(5)
 
-  // null = showing fiscal year list; set = showing account list for that year
-  const [selectedFY, setSelectedFY] = useState<FiscalYearOption | null>(null)
-  const [fyHovered,  setFyHovered]  = useState<string | null>(null)
+  const [{ fyYear: initFyYear, type: initType, depth: initDepth, query: initQuery }] =
+    useState(getInitialFromURL)
 
-  const [query,     setQuery]     = useState('')
-  const [type,      setType]      = useState('')
-  const [depth,     setDepth]     = useState<DepthFilter>('all')
+  // null = showing fiscal year list; set = showing account list for that year
+  const [selectedFY,   setSelectedFY]   = useState<FiscalYearOption | null>(null)
+  const [fyHovered,    setFyHovered]    = useState<string | null>(null)
+  const [targetFyYear, setTargetFyYear] = useState(initFyYear)
+
+  const [query,     setQuery]     = useState(initQuery)
+  const [type,      setType]      = useState(initType)
+  const [depth,     setDepth]     = useState<DepthFilter>(initDepth)
   const [rows,      setRows]      = useState<LedgerRow[]>([])
   const [loading,   setLoading]   = useState(true)
   const [hovered,   setHovered]   = useState<string | null>(null)
@@ -186,6 +212,30 @@ export function LedgerListPane() {
 
     return () => { cancelled = true }
   }, [selectedFY, client])
+
+  // Resolve ?fy=YYYY → selectedFY once fyYears has loaded
+  useEffect(() => {
+    if (!targetFyYear || selectedFY || fyYears.length === 0) return
+    const match = fyYears.find(fy => fy.from.startsWith(targetFyYear))
+    if (match) { setSelectedFY(match); setLoading(true) }
+    setTargetFyYear('')
+  }, [fyYears, targetFyYear, selectedFY])
+
+  // Sync filter state → URL query params (no page reload)
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams()
+      if (selectedFY)       p.set('fy',    selectedFY.from.slice(0, 4))
+      if (type)             p.set('type',  type)
+      if (depth !== 'all')  p.set('depth', DEPTH_TO_PARAM[depth])
+      if (query.trim())     p.set('q',     query.trim())
+      const qs  = p.toString()
+      const url = qs
+        ? `${window.location.pathname}?${qs}${window.location.hash}`
+        : `${window.location.pathname}${window.location.hash}`
+      window.history.replaceState(null, '', url)
+    } catch {}
+  }, [selectedFY, type, depth, query])
 
   const open = useCallback(
     (id: string) => {
