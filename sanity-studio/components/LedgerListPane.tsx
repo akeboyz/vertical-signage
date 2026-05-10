@@ -291,7 +291,7 @@ export function LedgerListPane() {
   // ── Fiscal year list ─────────────────────────────────────────────────────
   if (!selectedFY) {
     return (
-      <Card tone="default" height="fill" style={{ display: 'flex', flexDirection: 'column' }}>
+      <Card tone="default" height="fill" style={{ display: 'flex', flexDirection: 'column', minWidth: 700 }}>
 
         {fyYears.length === 0 ? (
           <Flex align="center" justify="center" padding={6} style={{ flex: 1 }}>
@@ -327,7 +327,7 @@ export function LedgerListPane() {
 
   // ── Account list (fiscal year selected) ──────────────────────────────────
   return (
-    <Card tone="default" height="fill" style={{ display: 'flex', flexDirection: 'column' }}>
+    <Card tone="default" height="fill" style={{ display: 'flex', flexDirection: 'column', minWidth: 700 }}>
 
       {/* ── Toolbar ── */}
       <Box style={{ borderBottom: '1px solid var(--card-border-color)', flexShrink: 0 }}>
