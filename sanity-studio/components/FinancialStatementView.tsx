@@ -32,6 +32,16 @@ function downloadCSV(content: string, filename: string) {
   URL.revokeObjectURL(url)
 }
 
+interface SupportingDoc {
+  _key:             string
+  label:            string
+  fiscalYearLabel?: string
+  uploadedAt?:      string
+  notes?:           string
+  fileUrl?:         string
+  fileName?:        string
+}
+
 interface LedgerAccount {
   _id:                  string
   accountId:            string
@@ -191,6 +201,7 @@ export function FinancialStatementView(_props: any) {
   const [balances,       setBalances]       = useState<Map<string, Balance>>(new Map())  // cumulative: BF + all txns up to 'to'
   const [incomeBalances, setIncomeBalances] = useState<Map<string, Balance>>(new Map())  // period only: txns from → to, no BF
   const [regCapData,     setRegCapData]     = useState<{ amount: number | null; accountIds: Set<string> }>({ amount: null, accountIds: new Set() })
+  const [supportingDocs, setSupportingDocs] = useState<SupportingDoc[]>([])
 
   const load = useCallback(async () => {
     if (!from && !to) {
@@ -265,6 +276,21 @@ export function FinancialStatementView(_props: any) {
   }, [from, to, client]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    client
+      .fetch<{ docs: SupportingDoc[] } | null>(
+        `*[_type == "financialStatement" && !(_id in path("drafts.**"))][0] {
+          "docs": supportingDocs[] | order(uploadedAt desc) {
+            _key, label, fiscalYearLabel, uploadedAt, notes,
+            "fileUrl":  file.asset->url,
+            "fileName": file.asset->originalFilename
+          }
+        }`
+      )
+      .then(data => setSupportingDocs(data?.docs ?? []))
+      .catch(() => {})
+  }, [client])
 
   const name = (a: LedgerAccount) =>
     lang === 'th' ? (a.nameTh || a.nameEn) : (a.nameEn || a.nameTh)
@@ -786,6 +812,73 @@ export function FinancialStatementView(_props: any) {
     <Card padding={4} tone="default">
       <Stack space={4}>
 
+        {/* ── Supporting Documents compact card — above period filter ── */}
+        {supportingDocs.length > 0 && (() => {
+          const highlightYear = from ? from.slice(0, 4) : null
+          return (
+            <Card padding={3} radius={2} border>
+              <Stack space={2}>
+                <Text size={0} weight="semibold" muted>
+                  📎 Supporting Documents ({supportingDocs.length})
+                </Text>
+                {supportingDocs.map(doc => {
+                  const isHighlighted = !!(highlightYear && doc.fiscalYearLabel && doc.fiscalYearLabel.includes(highlightYear))
+                  return (
+                    <Flex
+                      key={doc._key}
+                      align="center"
+                      justify="space-between"
+                      gap={2}
+                      style={{
+                        padding:      '4px 8px',
+                        borderRadius: 3,
+                        background:   isHighlighted ? 'rgba(34,197,94,0.07)' : undefined,
+                        border:       `1px solid ${isHighlighted ? 'var(--card-positive-fg-color, #22c55e)' : 'transparent'}`,
+                      }}
+                    >
+                      <Flex align="center" gap={2} style={{ minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ fontSize: 10, color: 'var(--card-muted-fg-color)', flexShrink: 0 }}>•</span>
+                        <span style={{
+                          fontSize: 12, lineHeight: '1.4', flexShrink: 1,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {doc.label}
+                        </span>
+                        {doc.fiscalYearLabel && (
+                          <span style={{
+                            fontSize: 10, padding: '1px 5px', borderRadius: 99, flexShrink: 0,
+                            background: isHighlighted ? 'rgba(34,197,94,0.18)' : 'var(--card-muted-bg-color)',
+                            color: isHighlighted ? 'var(--card-positive-fg-color, #16a34a)' : 'var(--card-muted-fg-color)',
+                            fontWeight: isHighlighted ? 700 : 400,
+                            border: `1px solid ${isHighlighted ? 'var(--card-positive-fg-color, #22c55e)' : 'var(--card-border-color)'}`,
+                          }}>
+                            {doc.fiscalYearLabel}
+                          </span>
+                        )}
+                      </Flex>
+                      {doc.fileUrl && (
+                        <a
+                          href={doc.fileUrl}
+                          download={doc.fileName ?? true}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            fontSize: 11, flexShrink: 0,
+                            color: 'var(--card-link-fg-color, #2276fc)',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          ⬇
+                        </a>
+                      )}
+                    </Flex>
+                  )
+                })}
+              </Stack>
+            </Card>
+          )
+        })()}
+
         {/* ── Period filter — always visible ── */}
         <Card padding={3} radius={2} border>
           <Stack space={2}>
@@ -880,6 +973,80 @@ export function FinancialStatementView(_props: any) {
             : tab === 'income' ? renderIncomeStatement()
             : renderBalanceSheet()
         )}
+
+        {/* ── Supporting Documents — always visible ── */}
+        <Card padding={3} radius={2} border>
+          <Stack space={3}>
+            <Text size={1} weight="semibold">📂 Supporting Documents</Text>
+
+            {supportingDocs.length === 0 ? (
+              <Text size={1} muted>
+                No documents uploaded yet — open the document's Settings tab to add files.
+              </Text>
+            ) : (() => {
+              const highlightYear = from ? from.slice(0, 4) : null
+              return supportingDocs.map(doc => {
+                const isHighlighted = !!(highlightYear && doc.fiscalYearLabel && doc.fiscalYearLabel.includes(highlightYear))
+                const dateLabel     = doc.uploadedAt ? doc.uploadedAt.slice(0, 10) : null
+                return (
+                  <div
+                    key={doc._key}
+                    style={{
+                      padding:      '8px 10px',
+                      borderRadius: 4,
+                      border:       `1px solid ${isHighlighted ? 'var(--card-positive-fg-color, #22c55e)' : 'var(--card-border-color)'}`,
+                      background:   isHighlighted ? 'rgba(34,197,94,0.07)' : undefined,
+                    }}
+                  >
+                    <Flex align="center" justify="space-between" gap={3}>
+                      <Flex align="flex-start" gap={2} style={{ minWidth: 0 }}>
+                        <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>📎</span>
+                        <Stack space={1} style={{ minWidth: 0 }}>
+                          <Text size={1} weight="semibold">{doc.label}</Text>
+                          {doc.notes && (
+                            <Text size={0} muted style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {doc.notes}
+                            </Text>
+                          )}
+                        </Stack>
+                      </Flex>
+                      <Flex align="center" gap={2} style={{ flexShrink: 0 }}>
+                        {doc.fiscalYearLabel && (
+                          <span style={{
+                            fontSize: 11, padding: '2px 7px', borderRadius: 99,
+                            background: isHighlighted ? 'rgba(34,197,94,0.18)' : 'var(--card-muted-bg-color)',
+                            color: isHighlighted ? 'var(--card-positive-fg-color, #16a34a)' : 'var(--card-muted-fg-color)',
+                            fontWeight: isHighlighted ? 700 : 400,
+                            border: `1px solid ${isHighlighted ? 'var(--card-positive-fg-color, #22c55e)' : 'var(--card-border-color)'}`,
+                          }}>
+                            {doc.fiscalYearLabel}
+                          </span>
+                        )}
+                        {dateLabel && (
+                          <Text size={0} muted>{dateLabel}</Text>
+                        )}
+                        {doc.fileUrl && (
+                          <a
+                            href={doc.fileUrl}
+                            download={doc.fileName ?? true}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              fontSize: 12, color: 'var(--card-link-fg-color, #2276fc)',
+                              textDecoration: 'none', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            ⬇ Download
+                          </a>
+                        )}
+                      </Flex>
+                    </Flex>
+                  </div>
+                )
+              })
+            })()}
+          </Stack>
+        </Card>
 
       </Stack>
     </Card>

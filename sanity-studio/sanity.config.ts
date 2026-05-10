@@ -137,7 +137,7 @@ export default defineConfig({
         if (schemaType === 'financialStatement') {
           return S.document().views([
             S.view.component(FinancialStatementView).id('fs-view').title('Statements'),
-            S.view.form().id('edit').title('Settings'),
+            S.view.form().id('edit').title('Documents'),
           ])
         }
         if (schemaType === 'assetRegister') {
