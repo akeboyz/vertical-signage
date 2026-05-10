@@ -301,6 +301,124 @@ export function AssetRegisterView(_props: any) {
     downloadCSV(toCSV(rows), `asset-register_as-of_${to || 'all'}.csv`)
   }
 
+  // ── PDF Export ────────────────────────────────────────────────────────────
+
+  const exportPDF = () => {
+    const asOfLabel  = to ? `As of ${fmtDate(to)}` : 'All periods'
+    const todayLabel = fmtDate(new Date().toISOString().slice(0, 10))
+    const filterLine = filterSegments.length > 0
+      ? `🔍 Filtered: ${filterSegments.join(' · ')} · Showing ${filtered.length} of ${assets.length} assets`
+      : ''
+
+    let tableRows = ''
+    for (const [type, typeAssets] of Object.entries(groups)) {
+      const gCost  = typeAssets.reduce((s, a) => s + totalCost(a), 0)
+      const gDepr  = typeAssets.reduce((s, a) => s + accumDepr(a), 0)
+      const gNBV   = typeAssets.reduce((s, a) => s + nbv(a), 0)
+      const gPDepr = (!from && !to) ? null : typeAssets.reduce((s, a) => s + (periodDepr(a) ?? 0), 0)
+
+      tableRows += `<tr class="grp"><td colspan="12">${fmtType(type)} <span class="muted">${typeAssets.length} asset${typeAssets.length !== 1 ? 's' : ''}</span></td></tr>`
+
+      for (const a of typeAssets) {
+        const cost  = totalCost(a)
+        const depr  = accumDepr(a)
+        const pDepr = periodDepr(a)
+        const value = nbv(a)
+        const badge = STATUS_LABEL[a.status ?? ''] ?? { label: a.status ?? '—', color: '#6B7280' }
+        tableRows += `<tr>
+          <td class="mono">${a.assetTag ?? '—'}</td>
+          <td>${[a.brand, a.model].filter(Boolean).join(' ') || '—'}</td>
+          <td class="mono sm">${a.glCode ? `${a.glCode} ${a.glName ?? ''}`.trim() : '—'}</td>
+          <td class="muted">${a.receivedDate ?? '—'}</td>
+          <td class="r mono">${fmt(cost)}</td>
+          <td class="muted sm">${DEPR_LABEL[a.depreciationMethod ?? ''] ?? '—'}</td>
+          <td class="r muted">${a.depreciationMethod === 'immediate' ? '—' : (a.usefulLifeMonths ?? '—')}</td>
+          <td class="r mono">${depr > 0 ? fmt(depr) : '—'}</td>
+          <td class="r mono">${pDepr !== null && pDepr > 0 ? fmt(pDepr) : '—'}</td>
+          <td class="r mono b">${fmt(value)}</td>
+          <td class="sm" style="color:${badge.color}">${badge.label}</td>
+          <td class="muted sm">${a.currentSite ?? '—'}</td>
+        </tr>`
+      }
+
+      tableRows += `<tr class="sub">
+        <td colspan="4">Subtotal — ${fmtType(type)}</td>
+        <td class="r mono">${fmt(gCost)}</td>
+        <td colspan="2"></td>
+        <td class="r mono">${fmt(gDepr)}</td>
+        <td class="r mono">${gPDepr !== null ? fmt(gPDepr) : '—'}</td>
+        <td class="r mono b">${fmt(gNBV)}</td>
+        <td colspan="2"></td>
+      </tr>`
+    }
+
+    tableRows += `<tr class="grand">
+      <td colspan="4">Grand Total</td>
+      <td class="r mono">${fmt(grandCost)}</td>
+      <td colspan="2"></td>
+      <td class="r mono" style="color:#e65100">${fmt(grandDepr)}</td>
+      <td class="r mono" style="color:#7b1fa2">${grandPeriodDepr !== null ? fmt(grandPeriodDepr) : '—'}</td>
+      <td class="r mono b" style="color:#2e7d32">${fmt(grandNBV)}</td>
+      <td colspan="2"></td>
+    </tr>`
+
+    const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>Asset Register</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sarabun', Arial, sans-serif; font-size: 10px; color: #111; padding: 20px; }
+  h1  { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+  .sub-title { font-size: 10px; color: #666; margin-bottom: 10px; }
+  .filter-banner { background: #fff8e1; border: 1px solid #f9a825; border-radius: 3px; padding: 5px 9px; font-size: 9.5px; margin-bottom: 12px; }
+  .chips { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .chip { border: 1px solid #ddd; border-radius: 4px; padding: 5px 9px; min-width: 110px; }
+  .chip-lbl { font-size: 8px; text-transform: uppercase; letter-spacing: 0.05em; color: #777; margin-bottom: 2px; }
+  .chip-val { font-size: 12px; font-weight: 700; font-family: monospace; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+  th { background: #f0f0f0; padding: 4px 7px; text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid #bbb; white-space: nowrap; }
+  td { padding: 3px 7px; border-bottom: 1px solid #eee; vertical-align: middle; }
+  .r    { text-align: right; }
+  .mono { font-family: monospace; }
+  .b    { font-weight: 700; }
+  .muted{ color: #888; }
+  .sm   { font-size: 8.5px; }
+  tr.grp  td { background: #f5f5f5; font-weight: 700; border-left: 3px solid #bbb; padding: 4px 7px; }
+  tr.sub  td { background: #f5f5f5; font-weight: 600; border-top: 2px solid #bbb; border-bottom: 2px solid #bbb; }
+  tr.grand td { background: #eeeeee; font-weight: 700; font-size: 10.5px; border-top: 3px double #999; border-bottom: 3px double #999; }
+  @media print { @page { size: A4 landscape; margin: 12mm; } body { padding: 0; } }
+</style>
+</head><body>
+  <h1>Asset Register</h1>
+  <div class="sub-title">${asOfLabel} &nbsp;·&nbsp; Generated ${todayLabel}</div>
+  ${filterLine ? `<div class="filter-banner">${filterLine}</div>` : ''}
+  <div class="chips">
+    <div class="chip"><div class="chip-lbl">Total Assets</div><div class="chip-val">${filtered.length}</div></div>
+    <div class="chip"><div class="chip-lbl">Total Cost (฿)</div><div class="chip-val">${fmt(grandCost)}</div></div>
+    <div class="chip"><div class="chip-lbl">Accum. Depr. (฿)</div><div class="chip-val">${fmt(grandDepr)}</div></div>
+    ${grandPeriodDepr !== null ? `<div class="chip"><div class="chip-lbl">Depr. for Period (฿)</div><div class="chip-val">${fmt(grandPeriodDepr)}</div></div>` : ''}
+    <div class="chip"><div class="chip-lbl">Net Book Value (฿)</div><div class="chip-val">${fmt(grandNBV)}</div></div>
+  </div>
+  <table>
+    <thead><tr>
+      <th>Asset Tag</th><th>Description</th><th>GL Account</th><th>Received</th>
+      <th class="r">Total Cost</th><th>Method</th><th class="r">Life (mo.)</th>
+      <th class="r">Accum. Depr.</th><th class="r">Depr. (Period)</th>
+      <th class="r">NBV</th><th>Status</th><th>Location</th>
+    </tr></thead>
+    <tbody>${tableRows}</tbody>
+  </table>
+</body></html>`
+
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(html)
+    win.document.close()
+    win.focus()
+    setTimeout(() => win.print(), 400)
+  }
+
   // ── Styles ────────────────────────────────────────────────────────────────
 
   const th = (align: 'left' | 'right' = 'left'): React.CSSProperties => ({
@@ -417,6 +535,10 @@ export function AssetRegisterView(_props: any) {
               <Button text="⬇ Export CSV" mode="ghost" tone="default" fontSize={1} padding={2}
                 disabled={loading || filtered.length === 0}
                 onClick={exportCSV}
+              />
+              <Button text="🖨 Print PDF" mode="ghost" tone="default" fontSize={1} padding={2}
+                disabled={loading || filtered.length === 0}
+                onClick={exportPDF}
               />
             </Flex>
           </Flex>
