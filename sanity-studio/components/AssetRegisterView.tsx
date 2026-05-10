@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useClient }      from 'sanity'
 import { IntentLink }     from 'sanity/router'
 import { Card, Stack, Text, Flex, Button, Spinner, Box } from '@sanity/ui'
@@ -38,6 +38,7 @@ interface AssetRow {
   additionalCostTotal: number
   glCode:             string | null
   glName:             string | null
+  accountCodeRef:     string | null
   currentSite:        string | null
   deprEntries:        DeprEntry[] | null
 }
@@ -57,6 +58,7 @@ const QUERY = `
     "additionalCostTotal": coalesce(math::sum(additionalCostSources[].allocatedCost), 0),
     "glCode":                accountCode->code,
     "glName":                coalesce(accountCode->nameTh, accountCode->nameEn),
+    "accountCodeRef":        accountCode._ref,
     "currentSite":           utilization[!defined(endDate)][0].projectSite->projectEn,
     "deprEntries":           depreciationEntries[]->{
       "glStatus":  accountingEntry.glStatus,
@@ -84,7 +86,8 @@ function fmtType(t: string | null): string {
   return t.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
 
-const AR_FILTER_KEY = 'ar:periodFilter'
+const AR_FILTER_KEY         = 'ar:periodFilter'
+const AR_ACCOUNT_FILTER_KEY = 'ar:accountFilter'
 
 function getInitialPeriod() {
   try {
@@ -98,6 +101,18 @@ function getInitialPeriod() {
   return { from: '', to: '', activeId: '' }
 }
 
+function getInitialAccountFilter(): string | null {
+  try {
+    const raw = localStorage.getItem(AR_ACCOUNT_FILTER_KEY)
+    if (raw) {
+      localStorage.removeItem(AR_ACCOUNT_FILTER_KEY)
+      const h = JSON.parse(raw) as { accountCodeRef?: string }
+      return h.accountCodeRef ?? null
+    }
+  } catch {}
+  return null
+}
+
 export function AssetRegisterView(_props: any) {
   const client  = useClient({ apiVersion: '2024-01-01' })
   const fyYears = useFiscalYears()
@@ -106,12 +121,14 @@ export function AssetRegisterView(_props: any) {
   const ACTIVE_STATUSES = new Set(['in_storage', 'installed', 'under_repair'])
 
   const [{ from: initFrom, to: initTo, activeId: initActiveId }] = useState(getInitialPeriod)
-  const [activeId,         setActiveId]         = useState(initActiveId)
-  const [from,             setFrom]             = useState(initFrom)
-  const [to,               setTo]               = useState(initTo)
-  const [assets,           setAssets]           = useState<AssetRow[]>([])
-  const [loading,          setLoading]          = useState(true)
-  const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(new Set(ACTIVE_STATUSES))
+  const [activeId,           setActiveId]           = useState(initActiveId)
+  const [from,               setFrom]               = useState(initFrom)
+  const [to,                 setTo]                 = useState(initTo)
+  const [assets,             setAssets]             = useState<AssetRow[]>([])
+  const [loading,            setLoading]            = useState(true)
+  const [selectedStatuses,   setSelectedStatuses]   = useState<Set<string>>(new Set(ACTIVE_STATUSES))
+  const [accountCodeFilterRef, setAccountCodeFilterRef] = useState<string | null>(getInitialAccountFilter)
+  const [accountCodes,         setAccountCodes]         = useState<{ _id: string; parentId: string | null; code: string | null; nameTh: string | null; nameEn: string | null }[]>([])
 
   const toggleStatus = (s: string) =>
     setSelectedStatuses(prev => {
@@ -141,6 +158,15 @@ export function AssetRegisterView(_props: any) {
     return () => sub.unsubscribe()
   }, [load]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    client
+      .fetch<{ _id: string; parentId: string | null; code: string | null; nameTh: string | null; nameEn: string | null }[]>(
+        `*[_type == "accountCode" && !(_id in path("drafts.**"))] { _id, "parentId": parentCode._ref, code, nameTh, nameEn }`
+      )
+      .then(data => setAccountCodes(data ?? []))
+      .catch(() => {})
+  }, [client])
+
   // ── Computed helpers ──────────────────────────────────────────────────────
 
   const totalCost = (a: AssetRow) => a.unitCost + (a.additionalCostTotal ?? 0)
@@ -154,12 +180,70 @@ export function AssetRegisterView(_props: any) {
 
   const nbv = (a: AssetRow) => totalCost(a) - accumDepr(a)
 
+  const periodDepr = (a: AssetRow): number | null => {
+    if (!from && !to) return null
+    return (a.deprEntries ?? [])
+      .filter(e => e != null && e.glStatus === 'posted' &&
+        (!from || !e.entryDate || e.entryDate >= from) &&
+        (!to   || !e.entryDate || e.entryDate <= to))
+      .reduce((s, e) => s + (e.lines ?? []).reduce((ls, l) => ls + l.cr, 0), 0)
+  }
+
+  // ── Filter & group ────────────────────────────────────────────────────────
+
+  // ── Descendant account set for group-aware filtering ─────────────────────
+
+  const descendantSet = useMemo<Set<string> | null>(() => {
+    if (!accountCodeFilterRef) return null
+    const children: Record<string, string[]> = {}
+    for (const ac of accountCodes) {
+      if (ac.parentId) {
+        if (!children[ac.parentId]) children[ac.parentId] = []
+        children[ac.parentId].push(ac._id)
+      }
+    }
+    const result = new Set<string>()
+    const walk = (id: string) => {
+      result.add(id)
+      for (const child of (children[id] ?? [])) walk(child)
+    }
+    walk(accountCodeFilterRef)
+    return result
+  }, [accountCodeFilterRef, accountCodes])
+
   // ── Filter & group ────────────────────────────────────────────────────────
 
   const filtered = assets.filter(a =>
     selectedStatuses.has(a.status ?? 'in_storage') &&
-    (!to || !a.receivedDate || a.receivedDate <= to)
+    (!to || !a.receivedDate || a.receivedDate <= to) &&
+    (!descendantSet || descendantSet.has(a.accountCodeRef ?? ''))
   )
+
+  const accountFilterCode = accountCodeFilterRef
+    ? accountCodes.find(ac => ac._id === accountCodeFilterRef)
+    : null
+
+  const fmtDate = (s: string) => {
+    if (!s) return ''
+    const [y, m, d] = s.split('-')
+    return `${d}/${m}/${y}`
+  }
+
+  const filterSegments: string[] = []
+  if (from || to) {
+    const parts = [from ? fmtDate(from) : '…', to ? fmtDate(to) : '…']
+    filterSegments.push(`Period [${parts.join(' – ')}]`)
+  }
+  if (!isAllSelected) {
+    filterSegments.push(`Status [${isActiveSelected ? 'Active' : `${selectedStatuses.size} selected`}]`)
+  }
+  if (accountCodeFilterRef && accountFilterCode) {
+    const glLabel = [accountFilterCode.code, accountFilterCode.nameTh ?? accountFilterCode.nameEn].filter(Boolean).join(' ')
+    const subNote = descendantSet && descendantSet.size > 1
+      ? ` (incl. ${descendantSet.size - 1} sub-account${descendantSet.size - 1 !== 1 ? 's' : ''})`
+      : ''
+    filterSegments.push(`GL [${glLabel}]${subNote}`)
+  }
 
   const groups = filtered.reduce<Record<string, AssetRow[]>>((acc, a) => {
     const key = a.assetType ?? '(Unknown)'
@@ -168,9 +252,10 @@ export function AssetRegisterView(_props: any) {
     return acc
   }, {})
 
-  const grandCost = filtered.reduce((s, a) => s + totalCost(a), 0)
-  const grandDepr = filtered.reduce((s, a) => s + accumDepr(a), 0)
-  const grandNBV  = filtered.reduce((s, a) => s + nbv(a), 0)
+  const grandCost       = filtered.reduce((s, a) => s + totalCost(a), 0)
+  const grandDepr       = filtered.reduce((s, a) => s + accumDepr(a), 0)
+  const grandNBV        = filtered.reduce((s, a) => s + nbv(a), 0)
+  const grandPeriodDepr = (!from && !to) ? null : filtered.reduce((s, a) => s + (periodDepr(a) ?? 0), 0)
 
   // ── CSV Export ────────────────────────────────────────────────────────────
 
@@ -178,16 +263,17 @@ export function AssetRegisterView(_props: any) {
     const header = [
       'Asset Tag', 'Brand', 'Model', 'Type', 'GL Account',
       'Received Date', 'Total Cost (THB)', 'Method', 'Useful Life (mo.)',
-      'Accum. Depr. (THB)', 'NBV (THB)', 'Status', 'Location',
+      'Accum. Depr. (THB)', 'Depr. (Period) (THB)', 'NBV (THB)', 'Status', 'Location',
     ]
     const rows: string[][] = [header]
 
     for (const [type, typeAssets] of Object.entries(groups)) {
-      rows.push([`--- ${fmtType(type)} ---`, '', '', '', '', '', '', '', '', '', '', '', ''])
+      rows.push([`--- ${fmtType(type)} ---`, '', '', '', '', '', '', '', '', '', '', '', '', ''])
       for (const a of typeAssets) {
-        const cost  = totalCost(a)
-        const depr  = accumDepr(a)
-        const value = nbv(a)
+        const cost   = totalCost(a)
+        const depr   = accumDepr(a)
+        const pDepr  = periodDepr(a)
+        const value  = nbv(a)
         rows.push([
           a.assetTag ?? '',
           a.brand ?? '',
@@ -199,17 +285,19 @@ export function AssetRegisterView(_props: any) {
           DEPR_LABEL[a.depreciationMethod ?? ''] ?? a.depreciationMethod ?? '',
           a.usefulLifeMonths != null ? String(a.usefulLifeMonths) : '',
           String(depr),
+          pDepr !== null ? String(pDepr) : '—',
           String(value),
           STATUS_LABEL[a.status ?? '']?.label ?? a.status ?? '',
           a.currentSite ?? '',
         ])
       }
-      const gCost = typeAssets.reduce((s, a) => s + totalCost(a), 0)
-      const gDepr = typeAssets.reduce((s, a) => s + accumDepr(a), 0)
-      const gNBV  = typeAssets.reduce((s, a) => s + nbv(a), 0)
-      rows.push(['', `Subtotal — ${fmtType(type)}`, '', '', '', '', String(gCost), '', '', String(gDepr), String(gNBV), '', ''])
+      const gCost  = typeAssets.reduce((s, a) => s + totalCost(a), 0)
+      const gDepr  = typeAssets.reduce((s, a) => s + accumDepr(a), 0)
+      const gNBV   = typeAssets.reduce((s, a) => s + nbv(a), 0)
+      const gPDepr = (!from && !to) ? null : typeAssets.reduce((s, a) => s + (periodDepr(a) ?? 0), 0)
+      rows.push(['', `Subtotal — ${fmtType(type)}`, '', '', '', '', String(gCost), '', '', String(gDepr), gPDepr !== null ? String(gPDepr) : '—', String(gNBV), '', ''])
     }
-    rows.push(['', 'Grand Total', '', '', '', '', String(grandCost), '', '', String(grandDepr), String(grandNBV), '', ''])
+    rows.push(['', 'Grand Total', '', '', '', '', String(grandCost), '', '', String(grandDepr), grandPeriodDepr !== null ? String(grandPeriodDepr) : '—', String(grandNBV), '', ''])
     downloadCSV(toCSV(rows), `asset-register_as-of_${to || 'all'}.csv`)
   }
 
@@ -334,15 +422,43 @@ export function AssetRegisterView(_props: any) {
           </Flex>
         </Card>
 
+        {/* ── Active filter banner ── */}
+        {filterSegments.length > 0 && (
+          <Card padding={3} radius={2} border tone="caution">
+            <Flex align="center" gap={3} justify="space-between">
+              <Text size={1}>
+                {'🔍 Filtered: '}
+                {filterSegments.join(' · ')}
+                {' · Showing '}
+                <strong>{filtered.length}</strong>
+                {' of '}
+                <strong>{assets.length}</strong>
+                {' assets'}
+              </Text>
+              {accountCodeFilterRef && (
+                <Button
+                  text="Clear GL filter"
+                  mode="ghost"
+                  tone="default"
+                  fontSize={1}
+                  padding={2}
+                  onClick={() => setAccountCodeFilterRef(null)}
+                />
+              )}
+            </Flex>
+          </Card>
+        )}
+
         {/* ── Summary chips ── */}
         {!loading && filtered.length > 0 && (
           <Flex gap={3} wrap="wrap">
             {([
-              { label: 'Total Assets',   value: String(filtered.length),  color: '#6B7280' },
-              { label: 'Total Cost',     value: fmt(grandCost),            color: '#3B82F6' },
-              { label: 'Accum. Depr.',   value: fmt(grandDepr),            color: '#F97316' },
-              { label: 'Net Book Value', value: fmt(grandNBV),             color: '#22C55E' },
-            ] as const).map(chip => (
+              { label: 'Total Assets',          value: String(filtered.length),                              color: '#6B7280' },
+              { label: 'Total Cost',            value: fmt(grandCost),                                       color: '#3B82F6' },
+              { label: 'Accum. Depr.',          value: fmt(grandDepr),                                       color: '#F97316' },
+              { label: 'Depreciation for Period', value: grandPeriodDepr !== null ? fmt(grandPeriodDepr) : '—', color: '#A855F7' },
+              { label: 'Net Book Value',        value: fmt(grandNBV),                                        color: '#22C55E' },
+            ] as { label: string; value: string; color: string }[]).map(chip => (
               <Box key={chip.label} padding={3} style={{
                 background: chip.color + '12',
                 border: `1px solid ${chip.color}30`,
@@ -377,6 +493,7 @@ export function AssetRegisterView(_props: any) {
                   <th style={th()}>Method</th>
                   <th style={th('right')}>Life (mo.)</th>
                   <th style={th('right')}>Accum. Depr.</th>
+                  <th style={th('right')}>Depr. (Period)</th>
                   <th style={th('right')}>NBV</th>
                   <th style={th()}>Status</th>
                   <th style={th()}>Location</th>
@@ -384,14 +501,15 @@ export function AssetRegisterView(_props: any) {
               </thead>
               <tbody>
                 {Object.entries(groups).map(([type, typeAssets]) => {
-                  const gCost = typeAssets.reduce((s, a) => s + totalCost(a), 0)
-                  const gDepr = typeAssets.reduce((s, a) => s + accumDepr(a), 0)
-                  const gNBV  = typeAssets.reduce((s, a) => s + nbv(a), 0)
+                  const gCost  = typeAssets.reduce((s, a) => s + totalCost(a), 0)
+                  const gDepr  = typeAssets.reduce((s, a) => s + accumDepr(a), 0)
+                  const gNBV   = typeAssets.reduce((s, a) => s + nbv(a), 0)
+                  const gPDepr = (!from && !to) ? null : typeAssets.reduce((s, a) => s + (periodDepr(a) ?? 0), 0)
 
                   return (
                     <React.Fragment key={type}>
                       <tr>
-                        <td colSpan={11} style={tdGroup()}>
+                        <td colSpan={12} style={tdGroup()}>
                           {fmtType(type)}
                           <span style={{ marginLeft: 8, fontWeight: 400, color: 'var(--card-muted-fg-color)' }}>
                             {typeAssets.length} asset{typeAssets.length !== 1 ? 's' : ''}
@@ -400,10 +518,11 @@ export function AssetRegisterView(_props: any) {
                       </tr>
 
                       {typeAssets.map(a => {
-                        const cost  = totalCost(a)
-                        const depr  = accumDepr(a)
-                        const value = nbv(a)
-                        const badge = STATUS_LABEL[a.status ?? ''] ?? { label: a.status ?? '—', color: '#6B7280' }
+                        const cost   = totalCost(a)
+                        const depr   = accumDepr(a)
+                        const pDepr  = periodDepr(a)
+                        const value  = nbv(a)
+                        const badge  = STATUS_LABEL[a.status ?? ''] ?? { label: a.status ?? '—', color: '#6B7280' }
                         const isImmediate = a.depreciationMethod === 'immediate'
 
                         return (
@@ -442,6 +561,9 @@ export function AssetRegisterView(_props: any) {
                             <td style={{ ...td('right'), fontFamily: 'monospace', color: depr > 0 ? '#F97316' : 'var(--card-muted-fg-color)' }}>
                               {depr > 0 ? fmt(depr) : '—'}
                             </td>
+                            <td style={{ ...td('right'), fontFamily: 'monospace', color: pDepr !== null && pDepr > 0 ? '#A855F7' : 'var(--card-muted-fg-color)' }}>
+                              {pDepr !== null && pDepr > 0 ? fmt(pDepr) : '—'}
+                            </td>
                             <td style={{ ...td('right'), fontFamily: 'monospace', fontWeight: 600, color: value < cost * 0.1 ? '#EF4444' : undefined }}>
                               {fmt(value)}
                             </td>
@@ -460,6 +582,9 @@ export function AssetRegisterView(_props: any) {
                         <td style={tdSub('right')}>{fmt(gCost)}</td>
                         <td colSpan={2} style={tdSub()} />
                         <td style={tdSub('right')}>{fmt(gDepr)}</td>
+                        <td style={{ ...tdSub('right'), color: gPDepr !== null && gPDepr > 0 ? '#A855F7' : undefined }}>
+                          {gPDepr !== null ? fmt(gPDepr) : '—'}
+                        </td>
                         <td style={tdSub('right')}>{fmt(gNBV)}</td>
                         <td colSpan={2} style={tdSub()} />
                       </tr>
@@ -472,6 +597,9 @@ export function AssetRegisterView(_props: any) {
                   <td style={tdGrand('right')}>{fmt(grandCost)}</td>
                   <td colSpan={2} style={tdGrand()} />
                   <td style={{ ...tdGrand('right'), color: '#F97316' }}>{fmt(grandDepr)}</td>
+                  <td style={{ ...tdGrand('right'), color: grandPeriodDepr !== null && grandPeriodDepr > 0 ? '#A855F7' : undefined }}>
+                    {grandPeriodDepr !== null ? fmt(grandPeriodDepr) : '—'}
+                  </td>
                   <td style={{ ...tdGrand('right'), color: '#22C55E' }}>{fmt(grandNBV)}</td>
                   <td colSpan={2} style={tdGrand()} />
                 </tr>

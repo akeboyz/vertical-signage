@@ -124,6 +124,22 @@ export default defineType({
       description:  'Inactive codes are hidden from dropdowns but preserved for historical records.',
     }),
 
+    defineField({
+      group:   'meta',
+      name:    'linkedSchedule',
+      title:   'Linked Schedule',
+      type:    'string',
+      options: {
+        list: [
+          { title: '🏗 Asset Register', value: 'asset_register' },
+          { title: '📬 AR Aging',       value: 'ar_aging'       },
+          { title: '📪 AP Aging',       value: 'ap_aging'       },
+        ],
+        layout: 'radio',
+      },
+      description: 'Optional — links this account to a sub-ledger schedule. Enables the 🔍 shortcut on the GL list and statement views.',
+    }),
+
     // Hidden sort field: prefix digit + stored code zero-padded to 8 digits.
     // e.g. asset "5101"  → "100005101", asset "15202" → "100015202"
     //      expense "5200" → "500005200"

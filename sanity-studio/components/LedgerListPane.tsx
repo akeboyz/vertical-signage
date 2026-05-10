@@ -18,6 +18,7 @@ interface LedgerRow {
   accountId?:       string
   parentAccountId?: string
   hasFiles?:        boolean
+  linkedSchedule?:  string
 }
 
 const fmtBal = (n: number): string =>
@@ -105,6 +106,7 @@ export function LedgerListPane() {
       "accountId":       accountCode._ref,
       "parentAccountId": accountCode->parentCode._ref,
       "hasFiles":        count(supportingDocs) > 0,
+      "linkedSchedule":  accountCode->linkedSchedule,
       "depth": select(
         !defined(accountCode->parentCode._ref)                                        => 0,
         !defined(accountCode->parentCode->parentCode._ref)                            => 1,
@@ -191,6 +193,17 @@ export function LedgerListPane() {
         localStorage.setItem(GL_FILTER_KEY, JSON.stringify({ from: selectedFY.from, to: selectedFY.to, activeId: selectedFY.id }))
       }
       router.navigateIntent('edit', { id: id.replace(/^drafts\./, ''), type: 'ledger' })
+    },
+    [router, selectedFY],
+  )
+
+  const navigateToAR = useCallback(
+    (accountId: string) => {
+      localStorage.setItem('ar:accountFilter', JSON.stringify({ accountCodeRef: accountId }))
+      if (selectedFY) {
+        localStorage.setItem('ar:periodFilter', JSON.stringify({ from: selectedFY.from, to: selectedFY.to, activeId: selectedFY.id }))
+      }
+      router.navigateIntent('edit', { id: 'asset-register-singleton', type: 'assetRegister' })
     },
     [router, selectedFY],
   )
@@ -363,6 +376,21 @@ export function LedgerListPane() {
                 }}>
                   {row.nameTh || row.nameEn}
                 </span>
+
+                {/* Asset Register shortcut */}
+                {row.linkedSchedule === 'asset_register' && row.accountId && (
+                  <button
+                    onClick={e => { e.stopPropagation(); navigateToAR(row.accountId!) }}
+                    title="View in Asset Register"
+                    style={{
+                      background: 'none', border: 'none', padding: '0 2px',
+                      cursor: 'pointer', fontSize: 11, flexShrink: 0,
+                      opacity: 0.55, lineHeight: 1,
+                    }}
+                  >
+                    🔍
+                  </button>
+                )}
 
                 {/* Right cluster: 📎 · balance · type icon */}
                 <Flex align="center" gap={1} style={{ marginLeft: 'auto', flexShrink: 0 }}>
