@@ -23,7 +23,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useClient, useFormValue }      from 'sanity'
-import { Card, Stack, Flex, Text, Box, Button, Badge } from '@sanity/ui'
+import { useRouter }                    from 'sanity/router'
+import { Card, Stack, Flex, Text, Box, Button, Badge, useToast } from '@sanity/ui'
 import type { StringInputProps } from 'sanity'
 
 interface Line {
@@ -50,6 +51,8 @@ const mkRef  = (ref: string | undefined) =>
 
 export function AccountingEntryInput(_props: StringInputProps) {
   const client = useClient({ apiVersion: '2024-01-01' })
+  const router = useRouter()
+  const toast  = useToast()
 
   // ── Document-level fields ─────────────────────────────────────────────────
   const rawId     = useFormValue(['_id'])   as string | undefined
@@ -480,6 +483,23 @@ export function AccountingEntryInput(_props: StringInputProps) {
   const allLinesHaveAccount = missingAccountLines === 0
   const canPost             = isBalanced && allLinesHaveAccount
 
+  // ── Navigate to GL for a given accountCode ref ───────────────────────────
+  const navigateToGL = async (accountCodeRef: string) => {
+    try {
+      const ledger = await client.fetch<{ _id: string } | null>(
+        `*[_type == "ledger" && accountCode._ref == $ref && !(_id in path("drafts.**"))][0]{ _id }`,
+        { ref: accountCodeRef }
+      )
+      if (!ledger) {
+        toast.push({ status: 'warning', title: 'No GL account found', description: 'No ledger entry exists for this account code yet.' })
+        return
+      }
+      router.navigateIntent('edit', { id: ledger._id, type: 'ledger' })
+    } catch {
+      toast.push({ status: 'error', title: 'Navigation failed', description: 'Could not open the General Ledger for this account.' })
+    }
+  }
+
   // ── Styles ────────────────────────────────────────────────────────────────
   const tone  = isPosted ? 'positive' : isVoided ? 'critical' : 'default'
   const cellSt = (align: 'left' | 'right' = 'left'): React.CSSProperties => ({
@@ -522,12 +542,26 @@ export function AccountingEntryInput(_props: StringInputProps) {
                 {(lines ?? []).map((ln, i) => (
                   <tr key={ln._key ?? i}>
                     <td style={cellSt()}>
-                      <Text size={1}>
-                        {ln.accountCode?._ref
-                          ? (accountNames[ln.accountCode._ref] ?? '…')
-                          : <span style={{ color: 'var(--card-muted-fg-color)' }}>— set account above</span>
-                        }
-                      </Text>
+                      {ln.accountCode?._ref ? (
+                        <button
+                          onClick={() => navigateToGL(ln.accountCode!._ref!)}
+                          title="Open in General Ledger"
+                          style={{
+                            background: 'none', border: 'none', padding: 0, margin: 0,
+                            cursor: 'pointer', textAlign: 'left', color: 'inherit',
+                            fontSize: 12, fontFamily: 'inherit',
+                            textDecoration: 'underline',
+                            textDecorationStyle: 'dotted',
+                            textDecorationColor: 'var(--card-muted-fg-color)',
+                          }}
+                        >
+                          {accountNames[ln.accountCode._ref] ?? '…'}
+                        </button>
+                      ) : (
+                        <Text size={1}>
+                          <span style={{ color: 'var(--card-muted-fg-color)' }}>— set account above</span>
+                        </Text>
+                      )}
                     </td>
                     <td style={cellSt()}><Text size={1}>{ln.description ?? ''}</Text></td>
                     <td style={cellSt('right')}>
