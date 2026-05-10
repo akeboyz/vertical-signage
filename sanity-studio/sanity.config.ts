@@ -34,6 +34,7 @@ import { HowToTool }            from './tools/HowToTool'
 import { DashboardTool }        from './tools/DashboardTool'
 import { PartyMigrationTool }   from './tools/PartyMigrationTool'
 import { accessControlPlugin, accessStore } from './plugins/accessControl'
+import { paneWidthOverride }               from './plugins/paneWidthOverride'
 
 const howToPlugin = definePlugin({
   name: 'how-to-guide',
@@ -73,6 +74,7 @@ export default defineConfig({
   dataset:   DATASET,
 
   plugins: [
+    paneWidthOverride(),
     accessControlPlugin(),
     structureTool({
       // Every document opens in read-only Overview by default.
