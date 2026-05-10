@@ -337,7 +337,7 @@ export function LedgerListPane() {
   // ── Account list (fiscal year selected) ──────────────────────────────────
   return (
     <Card tone="default" height="fill" style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      position: 'fixed', top: 60, left: 0, right: 0, bottom: 0,
       zIndex: 999999,
       background: 'var(--card-bg-color)',
       overflow: 'auto',
