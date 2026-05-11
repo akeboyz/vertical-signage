@@ -31,6 +31,7 @@ import { FinancialStatementView }  from './components/FinancialStatementView'
 import { FiscalYearListPane }      from './components/FiscalYearListPane'
 import { LedgerListPane }          from './components/LedgerListPane'
 import { LedgerOverview }         from './components/LedgerOverview'
+import { AccountCodeTreeView }    from './tools/AccountCodeTreeView'
 import { HowToTool }            from './tools/HowToTool'
 import { DashboardTool }        from './tools/DashboardTool'
 import { PartyMigrationTool }   from './tools/PartyMigrationTool'
@@ -283,7 +284,14 @@ export default defineConfig({
           group('operations', 'Operations', '⚙️', [
             can('contractType') && S.documentTypeListItem('contractType').title('Process Setup'),
             S.divider(),
-            isAdmin && S.documentTypeListItem('accountCode').title('Account Codes'),
+            isAdmin && S.listItem()
+              .id('account-codes-tree')
+              .title('Account Codes')
+              .child(
+                S.component(AccountCodeTreeView)
+                  .id('account-codes-tree-pane')
+                  .title('Account Codes')
+              ),
             isAdmin && S.documentTypeListItem('accountCodeGroup').title('Account Code Groups'),
             isAdmin && S.documentTypeListItem('fiscalYearConfig').title('Fiscal Year Config'),
           ]),
