@@ -8,6 +8,10 @@ import { DynamicFieldsInput }               from '../components/DynamicFieldsInp
 import { RetrieveFromProjectSiteInput }     from '../components/RetrieveFromProjectSiteInput'
 import { ExistingContractsWarning }         from '../components/ExistingContractsWarning'
 import { SignedStatusInput }               from '../components/SignedStatusInput'
+import { BillingPeriodsInput }             from '../components/BillingPeriodsInput'
+import { PeriodBillingCalcInput }          from '../components/PeriodBillingCalcInput'
+import { PeriodStatusInput }               from '../components/PeriodStatusInput'
+import { PeriodPaymentButton }             from '../components/PeriodPaymentButton'
 
 /**
  * Contract / Quotation document.
@@ -40,6 +44,7 @@ export default defineType({
   groups: [
     { name: 'customer',  title: 'Party'               },
     { name: 'rental',    title: 'Rental Details'      },
+    { name: 'billing',   title: 'Billing Periods'     },
     { name: 'approval',  title: 'Approval'            },
     { name: 'signed',    title: 'Signed Documents'    },
     { name: 'generated', title: 'Generated Documents' },
@@ -136,6 +141,136 @@ export default defineType({
       readOnly:    ({ document }) => (document?.contractApprovalStatus as string) === 'approved',
       description: 'Fields defined by the selected Contract Type.',
       components:  { input: DynamicFieldsInput },
+    }),
+
+    // ── Billing periods (recurring rent + electricity per month) ──────────────
+    // Reconstructed from BillingPeriodsInput / PeriodPaymentButton / PeriodStatusInput
+    // / PeriodBillingCalcInput components. Documents in the dataset already carry
+    // this array — the schema definition was missing, which surfaced as "Unknown field".
+    defineField({
+      group:       'billing',
+      name:        'billingPeriods',
+      title:       'Billing Periods',
+      type:        'array',
+      description: 'Monthly billing rows for the rental. Use "Generate All Billing Periods" to populate the full contract duration in one click, then record rent payments per row as they come due.',
+      components:  { input: BillingPeriodsInput },
+      of: [{
+        type: 'object',
+        name: 'billingPeriod',
+        fields: [
+          defineField({
+            name:     'periodNumber',
+            title:    'Period #',
+            type:     'number',
+            readOnly: true,
+          }),
+          defineField({
+            name:       'periodStart',
+            title:      'Period Start',
+            type:       'date',
+            validation: Rule => Rule.required(),
+          }),
+          defineField({
+            name:       'periodEnd',
+            title:      'Period End',
+            type:       'date',
+            validation: Rule => Rule.required(),
+          }),
+          defineField({
+            name:        'rentalAmount',
+            title:       'Rental Amount (THB)',
+            type:        'number',
+            validation:  Rule => Rule.required().min(0),
+            description: 'Monthly rent for this period.',
+          }),
+          defineField({
+            name:        'electricityRate',
+            title:       'Electricity Rate (THB / unit)',
+            type:        'number',
+            description: 'Optional. Leave blank if electricity is not metered for this period.',
+          }),
+          defineField({
+            name:        'meterStart',
+            title:       'Meter Reading — Start',
+            type:        'number',
+            description: 'Optional. Enter at the beginning of the period.',
+          }),
+          defineField({
+            name:        'meterEnd',
+            title:       'Meter Reading — End',
+            type:        'number',
+            description: 'Optional. Enter at the end of the period to calculate electricity charge.',
+          }),
+          defineField({
+            name:       'billingCalc',
+            title:      'Billing Total',
+            type:       'string',
+            readOnly:   true,
+            description: 'Auto-calculated from rental + (meter end − meter start) × electricity rate. Read-only.',
+            components: { input: PeriodBillingCalcInput },
+          }),
+          defineField({
+            name:       'accrualStatus',
+            title:      'Status',
+            type:       'string',
+            readOnly:   true,
+            description: 'Auto-derived from period dates + linked Payment status. Not user-editable.',
+            options: { list: [
+              { title: '🕐 Upcoming', value: 'upcoming' },
+              { title: '🔴 Due',      value: 'due'      },
+              { title: '🚨 Overdue',  value: 'overdue'  },
+              { title: '📤 Invoiced', value: 'invoiced' },
+              { title: '✅ Paid',     value: 'paid'     },
+            ]},
+            components: { input: PeriodStatusInput },
+          }),
+          defineField({
+            name:        'linkedPayment',
+            title:       'Linked Payment',
+            type:        'reference',
+            to:          [{ type: 'payment' }],
+            readOnly:    true,
+            description: 'Auto-linked when "Record Rent Payment" is clicked. Click "Open Payment" in the status card to view.',
+          }),
+          defineField({
+            name:        'createPayment',
+            title:       'Record Payment',
+            type:        'string',
+            description: 'Click to create a Payment document for this period and link it back here.',
+            components:  { input: PeriodPaymentButton },
+          }),
+        ],
+        preview: {
+          select: {
+            periodNumber:    'periodNumber',
+            periodStart:     'periodStart',
+            periodEnd:       'periodEnd',
+            rentalAmount:    'rentalAmount',
+            electricityRate: 'electricityRate',
+            meterStart:      'meterStart',
+            meterEnd:        'meterEnd',
+            accrualStatus:   'accrualStatus',
+          },
+          prepare({ periodNumber, periodStart, periodEnd, rentalAmount, electricityRate, meterStart, meterEnd, accrualStatus }) {
+            const icon: Record<string, string> = {
+              upcoming: '🕐', due: '🔴', overdue: '🚨', invoiced: '📤', paid: '✅',
+            }
+            const fmtD = (s?: string) => s
+              ? new Date(s + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })
+              : '—'
+            const units    = (meterStart != null && meterEnd != null) ? Math.max(0, Number(meterEnd) - Number(meterStart)) : 0
+            const elecCost = units * Number(electricityRate ?? 0)
+            const total    = Number(rentalAmount ?? 0) + elecCost
+            const amount   = rentalAmount != null
+              ? `฿${total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : '—'
+            return {
+              title:    `${icon[accrualStatus ?? 'upcoming'] ?? '🕐'} Period ${periodNumber ?? '?'}  ·  ${fmtD(periodStart)} → ${fmtD(periodEnd)}`,
+              subtitle: amount,
+            }
+          },
+        },
+      }],
     }),
 
     // ── Legacy fields — hidden, kept for backward compatibility ───────────────
