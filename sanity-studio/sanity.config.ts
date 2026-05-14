@@ -213,7 +213,36 @@ export default defineConfig({
                       ])
                   )
               ),
-            can('media')    && S.documentTypeListItem('media').title('Media Library'),
+            can('media')    && S.listItem()
+              .id('media-library')
+              .title('Media Library')
+              .child(
+                S.list().title('Media Library').items([
+                  S.listItem()
+                    .id('media-all')
+                    .title('All Media')
+                    .child(S.documentTypeList('media').title('All Media')),
+                  S.listItem()
+                    .id('media-by-project')
+                    .title('By Project')
+                    .child(
+                      S.documentTypeList('project')
+                        .title('Media — Select Project')
+                        .filter('_type == "project" && isActive == true')
+                        .child(projectId =>
+                          S.documentList()
+                            .id(`media-for-${projectId}`)
+                            .title('Project Media')
+                            .schemaType('media')
+                            .filter('_type == "media" && references($projectId)')
+                            .params({ projectId })
+                            .canHandleIntent((name, params) =>
+                              name === 'edit' && params.type === 'media'
+                            )
+                        )
+                    ),
+                ])
+              ),
             S.divider(),
             can('offer')    && S.documentTypeListItem('offer').title('Offers'),
             can('provider') && S.documentTypeListItem('provider').title('Providers'),
