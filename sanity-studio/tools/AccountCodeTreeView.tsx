@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useClient } from 'sanity'
-import { Box, Button, Card, Flex, Spinner, Text, Badge } from '@sanity/ui'
+import { Box, Button, Card, Flex, Spinner, Text, Badge, useToast } from '@sanity/ui'
 
 const TRANSLATE_URL =
   (typeof process !== 'undefined' && (process.env as any).SANITY_STUDIO_API_BASE_URL
@@ -419,6 +419,7 @@ export function AccountCodeTreeView({
   const meta = accountType ? TYPE_META[accountType] : null
 
   const client = useClient({ apiVersion: '2024-01-01' })
+  const toast  = useToast()
 
   const [nodes,       setNodes]       = useState<FlatNode[]>([])
   const [collapsed,   setCollapsed]   = useState<Set<string>>(new Set())
@@ -747,6 +748,10 @@ export function AccountCodeTreeView({
     const toCreate = nodes.filter(n => !n._id && !n.markedDelete && n.code.trim())
     const toUpdate = nodes.filter(n => n._id && n.dirty && !n.markedDelete)
 
+    // Collect any failed ledger auto-creates so we can warn the user after save
+    // without rolling back the corresponding accountCode.
+    const ledgerFailures: { code: string; reason: string }[] = []
+
     try {
       // Create new nodes first (to get their IDs for child references)
       for (const n of toCreate) {
@@ -776,6 +781,20 @@ export function AccountCodeTreeView({
           ...(parentRef ? { parentCode: parentRef } : {}),
         })
         keyToId.set(n._key, doc._id)
+
+        // Auto-create paired ledger doc so the new accountCode appears
+        // immediately in General Ledger and Financial Statements — both query
+        // *[_type == "ledger"] for their account list. Failure here doesn't
+        // roll back the accountCode; user gets a warning toast with the codes
+        // and the recovery command (scripts/seed-ledgers.mjs).
+        try {
+          await client.create({
+            _type:       'ledger',
+            accountCode: { _type: 'reference', _ref: doc._id, _weak: true },
+          })
+        } catch (e: any) {
+          ledgerFailures.push({ code: n.code, reason: e?.message ?? 'unknown' })
+        }
       }
 
       await Promise.all([
@@ -808,6 +827,16 @@ export function AccountCodeTreeView({
       ])
 
       setSaved(true)
+
+      if (ledgerFailures.length > 0) {
+        toast.push({
+          status:      'warning',
+          title:       `${ledgerFailures.length} ledger doc${ledgerFailures.length > 1 ? 's' : ''} failed to create`,
+          description: `Affected accounts: ${ledgerFailures.map(f => f.code).join(', ')}. Run scripts/seed-ledgers.mjs to backfill.`,
+          duration:    8000,
+        })
+      }
+
       await load()
     } catch (e: any) {
       setError(e?.message ?? 'Save failed')
