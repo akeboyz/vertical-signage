@@ -8,11 +8,14 @@ type SlotResult = { projectId: string; ok: boolean; text: string }
  * Manual "Add to Playlist" fallback action — appears in the ••• menu on Media docs.
  *
  * Uses the same exclude-based target resolution as MediaPublishAction:
- *   scope="project" → targets = media.projects[]
- *   scope="global"  → targets = all active projects MINUS media.excludedProjects[]
+ *   kind="notice" or scope="project" → targets = media.projects[]
+ *   scope="global"                   → targets = all active projects MINUS media.excludedProjects[]
  *
  * No project picker. Targets are pre-configured in the form via the checklist.
  * Always shows a result dialog summarising what was created / skipped.
+ *
+ * For removal of existing slots, use the "Remove from Playlist on Publish" checkbox
+ * on the form and press Publish (handled by MediaPublishAction).
  */
 export function AddToPlaylistAction(props: DocumentActionProps) {
   const client = useClient({ apiVersion: '2024-01-01' })

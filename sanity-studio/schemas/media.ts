@@ -223,7 +223,10 @@ export default defineType({
       title: 'Active',
       type: 'boolean',
       initialValue: true,
-      description: 'Master switch. Disabling hides this media from ALL playlists.',
+      description:
+        'Master switch. Disable to hide this media from BOTH the rotation and the Building Updates panel on the kiosk. ' +
+        'The media stays in the library and no playlist slots are deleted — re-enable to show again. ' +
+        'Takes effect on the kiosk after the next deploy.',
     }),
 
     // ── Expiry (notices only) ─────────────────────────────────────────────────
@@ -235,19 +238,37 @@ export default defineType({
       description: 'Optional. Once this date passes, the notice is automatically excluded from the playlist. Leave blank to never expire.',
     }),
 
-    // ── Playlist auto-slot ────────────────────────────────────────────────────
+    // ── Playlist auto-slot — ADD on publish ───────────────────────────────────
     // Applies to both promo and notice.
     // initialValue=false: opt-in; avoids accidental duplicate slots on re-publish.
+    // Mutually exclusive with removeFromPlaylistOnPublish at publish time.
     defineField({
       name: 'addToPlaylistOnPublish',
       title: 'Add to Playlist on Publish',
       type: 'boolean',
       initialValue: false,
       description:
-        'When published, automatically create a playlist slot for the target projects. ' +
-        'Notice → targets the Projects field above. ' +
-        'Promo / Scope=Project → targets the Projects field above (all selected). ' +
-        'Promo / Scope=Global  → targets ALL active projects; use "Excluded Projects" below to opt-out specific ones.',
+        'Tick this and press Publish to automatically add this media as a new rotation slot in every target project. ' +
+        'Targets: Notices and project-scoped promos use the Projects field above; ' +
+        'global promos use all active projects minus Excluded Projects below. ' +
+        'The checkbox resets to off after a successful publish (one-shot trigger). ' +
+        'Takes effect on the kiosk after the next deploy.',
+    }),
+
+    // ── Playlist auto-slot — REMOVE on publish ────────────────────────────────
+    // Applies to both promo and notice.
+    // initialValue=false: opt-in; user must tick deliberately each time.
+    // Mutually exclusive with addToPlaylistOnPublish at publish time — publish is blocked if both are set.
+    defineField({
+      name: 'removeFromPlaylistOnPublish',
+      title: 'Remove from Playlist on Publish',
+      type: 'boolean',
+      initialValue: false,
+      description:
+        'Tick this and press Publish to automatically delete every existing rotation slot for this media across all target projects. ' +
+        'The media itself stays in the library — only the rotation slot documents are removed. ' +
+        'The checkbox resets to off after a successful publish (one-shot trigger). ' +
+        'Takes effect on the kiosk after the next deploy.',
     }),
 
     // Exclude-based project selector — global promo only.
