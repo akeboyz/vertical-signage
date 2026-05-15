@@ -100,10 +100,11 @@ export default defineType({
       ]},
       initialValue: 'site_created',
     }),
-    defineField({ name: 'approvalStatus',      title: 'Approval Status',    type: 'string',   hidden: true }),
-    defineField({ name: 'approvalResetReason', title: 'Reset Reason',       type: 'string',   hidden: true }),
-    defineField({ name: 'approvedAt',          title: 'Approved At',        type: 'datetime', hidden: true }),
-    defineField({ name: 'notificationEmail',   title: 'Notification Email', type: 'string',   hidden: true }),
+    defineField({ name: 'approvalStatus',       title: 'Approval Status',        type: 'string',   hidden: true }),
+    defineField({ name: 'approvalResetReason',  title: 'Reset Reason',           type: 'string',   hidden: true }),
+    defineField({ name: 'approvedAt',           title: 'Approved At',            type: 'datetime', hidden: true }),
+    defineField({ name: 'lastApprovalSnapshot', title: 'Last Approval Snapshot', type: 'string',   hidden: true, readOnly: true }),
+    defineField({ name: 'notificationEmail',    title: 'Notification Email',     type: 'string',   hidden: true }),
   ],
 
   preview: {
