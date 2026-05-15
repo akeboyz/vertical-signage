@@ -12,6 +12,7 @@ import { createAutoNumberInput }      from '../components/AutoNumberInput'
 import { CopyFromProcurementInput }         from '../components/CopyFromProcurementInput'
 import { ProcessSetupDescriptionBanner }   from '../components/ProcessSetupDescriptionBanner'
 import { ApprovalLockedBanner }            from '../components/ApprovalLockedBanner'
+import { accountingEntryField }            from './accountingEntryField'
 
 const ProcurementNumberInput = createAutoNumberInput('purchaseOrder')
 
@@ -31,13 +32,14 @@ export default defineType({
   type:  'document',
 
   groups: [
-    { name: 'spec',      title: '1. Compare & Approve', default: true },
-    { name: 'ordering',  title: '2. Ordering'                         },
-    { name: 'delivery',  title: '3. Delivery'                         },
-    { name: 'payment',   title: '4. Payment'                          },
-    { name: 'generated', title: 'Generated Documents'                 },
-    { name: 'dynamic',   title: 'Activity Fields'                     },
-    { name: 'custom',    title: 'Custom Fields'                       },
+    { name: 'spec',       title: '1. Compare & Approve', default: true },
+    { name: 'ordering',   title: '2. Ordering'                         },
+    { name: 'delivery',   title: '3. Delivery'                         },
+    { name: 'payment',    title: '4. Payment'                          },
+    { name: 'accounting', title: '5. Accounting'                       },
+    { name: 'generated',  title: 'Generated Documents'                 },
+    { name: 'dynamic',    title: 'Activity Fields'                     },
+    { name: 'custom',     title: 'Custom Fields'                       },
   ],
 
   fields: [
@@ -347,6 +349,72 @@ export default defineType({
         preview: { select: { title: 'key', subtitle: 'value' } },
       })],
     }),
+
+    // ── Accounting ────────────────────────────────────────────────────────────
+    // Reconstructed 2026-05-15 from production data + AccountingEntryInput,
+    // AutoAllocatedCostInput, AutoApAccountInput, AutoGlFromAssetTypeInput,
+    // AutoGlFromProcurementInput, TotalAssetCostDisplay component refs.
+    // All five fields were missing from the schema while data already carried them
+    // on every published procurement document (6/6 docs for the first four,
+    // 4/6 for `documents`). Same loss pattern as the billingPeriods recovery.
+    defineField({
+      group:       'accounting',
+      name:        'accountCode',
+      title:       '5.1 · GL Account (Asset / Expense)',
+      type:        'reference',
+      to:          [{ type: 'accountCode' }],
+      weak:        true,
+      options:     { disableNew: true },
+      description: 'Account this procurement posts to. Auto-derived from asset type via Process Setup; pairs with the AP account below to form the Dr/Cr lines in the Accounting Entry below.',
+    }),
+
+    defineField({
+      group:       'accounting',
+      name:        'apAccount',
+      title:       '5.2 · Accounts Payable',
+      type:        'reference',
+      to:          [{ type: 'accountCode' }],
+      weak:        true,
+      options:     { disableNew: true },
+      description: 'Liability account credited when this procurement is recognised. Auto-derived; do not edit unless overriding the default AP routing.',
+    }),
+
+    defineField({
+      group:       'accounting',
+      name:        'invoiceAmount',
+      title:       '5.3 · Invoice Amount (THB)',
+      type:        'number',
+      description: 'Total invoice value. Used to allocate per-unit cost across quantity (Procurement → invoiceAmount ÷ quantity) for downstream asset cost calculations.',
+      validation:  Rule => Rule.min(0),
+    }),
+
+    defineField({
+      group:       'accounting',
+      name:        'documents',
+      title:       '5.4 · Procurement Documents',
+      type:        'object',
+      description: 'Supporting files attached to this procurement. Both fields are optional.',
+      fields: [
+        defineField({
+          name:    'specSheet',
+          title:   'Spec Sheet',
+          type:    'file',
+          options: { accept: '.pdf,image/*' },
+        }),
+        defineField({
+          name:    'vendorQuotation',
+          title:   'Vendor Quotation',
+          type:    'file',
+          options: { accept: '.pdf,image/*' },
+        }),
+      ],
+    }),
+
+    // ── Accounting Entry (shared field shape, imported from accountingEntryField) ──
+    // Same import-and-spread pattern as payment.ts (line 28 + spread at the
+    // end of payment fields). Data shape (entryDate, glStatus, lines[], postedAt)
+    // matches accountingEntryField.ts exactly — 6/6 procurement docs already carry it.
+    accountingEntryField,
 
   ],
 
